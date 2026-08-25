@@ -1,0 +1,8 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "portfolio", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 },
+    { "name": "dlx", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "/home/undefeated/dlx", "run", "dev", "--", "-p", "3100"], "port": 3100 },
+    { "name": "dex", "runtimeExecutable": "sh", "runtimeArgs": ["-c", "exec /home/undefeated/Desktop/dex/dex -addr :${PORT:-7333}"], "port": 7333, "autoPort": true }
+  ]
+}
