@@ -216,5 +216,5 @@ export const meta = {
   title: "LOHIT — Backend Engineer & Builder",
   description:
     "Portfolio of Lohit — backend engineer building durable execution engines, AI-driven incident response, and real-time platforms. Node.js, Go, PostgreSQL.",
-  url: "https://example.com", // ⟨replace with your domain when you deploy⟩
+  url: "https://lohit-portfolio-drab.vercel.app",
 };
