@@ -149,6 +149,56 @@ export const projects: Project[] = [
     live: "https://a4sattaking.net/",
     hue: 130,
   },
+  {
+    slug: "rsyc-n",
+    index: "04",
+    name: "RSYC-N",
+    tagline: "A shared fund ledger and noticeboard for a village youth club — PIN-gated, append-only, built for phones.",
+    role: "Sole Developer",
+    year: "2026",
+    tech: ["Node.js", "Express.js", "MongoDB", "React", "JWT"],
+    overview:
+      "RSYC is the treasury and noticeboard for Rao Shekha Ji Yuva Club, Nangla. Members contribute a fixed amount every month; anyone holding the club PIN can see the balance and every rupee that has left it. Admins record. Nobody needs a username.",
+    problem:
+      "A village club's money lives in one person's notebook and a stream of WhatsApp screenshots. Members cannot verify the balance, disputes have no evidence, and every member's phone number is one forwarded screenshot away from leaking.",
+    thinking:
+      "Money is a whole number of rupees, never a float. The balance is a sum over entries, never a stored number. Entries become append-only after fifteen minutes — corrections are reversals that net to zero, not edits. Identity is a shared PIN, and rotating it is the entire revocation story: bump a version, every cookie in the village dies at once.",
+    architecture:
+      "Three Express routers behind three guards — open, viewer, admin and master. The open router has no import path to the ledger, member or dues services, so a phone number cannot leak through a mistaken conditional. Credits carry their month allocation, so the row that moves the balance is the row that settles dues; contribution plans have effective dates, so history keeps the amount that was in force at the time.",
+    interfaceNotes:
+      "Mobile-first React in a Shekhawati palette — indigo, marigold, oxblood, brass. Every ornament is SVG drawn in the browser: a jharokha crest, a jali screen behind the balance card, deterministic mandala covers per event. Rozha One and Mukta so Hindi names set properly beside English. Light and dark, safe-area insets, 44px tap targets.",
+    technology:
+      "Node.js with Express 4, Mongoose 8 on MongoDB Atlas, a bcrypt-hashed PIN, JWT httpOnly cookies carrying the current pinVersion, express-rate-limit at the edge. React 18 with React Router and Vite. Deploys as one Vercel project — static client plus a single serverless function for the API — with optional Cloudinary uploads and WhatsApp Cloud API notifications.",
+    outcome:
+      "A complete club treasury — ledger, dues, members, events, join requests, audit log — with no member accounts and a revocation model that needs no session table.",
+    github: "https://github.com/Undefeated11/RSYC-N",
+    hue: 265,
+  },
+  {
+    slug: "chess-analyser",
+    index: "05",
+    name: "CHESS ANALYSER",
+    tagline: "A browser-only game analyser running Stockfish 16 in WebAssembly.",
+    role: "Sole Developer",
+    year: "2026",
+    tech: ["React", "Vite", "Tailwind", "Stockfish", "WebAssembly"],
+    overview:
+      "Paste a PGN or type a Chess.com username, and every move of the game is evaluated by Stockfish 16 running entirely in the browser. No server, no account, no upload.",
+    problem:
+      "Post-game analysis usually sits behind a subscription, or behind a server that has to run an engine per user. Casual players want to know where a game turned without paying for it, and without their games leaving the device.",
+    thinking:
+      "The engine belongs on the client. A single-threaded NNUE WASM build is fast enough for move-by-move evaluation of a full game at depth 14, and keeping everything in the browser removes the server, the queue and the bill.",
+    architecture:
+      "A Web Worker hosts Stockfish and answers UCI evaluation requests one FEN at a time. A game-analysis hook walks the move list, normalises centipawn scores to the side to move — mates mapped to a saturated score — and classifies each move by centipawn loss into Best, Good, Inaccuracy, Mistake or Blunder. Chess.com's public API supplies the last three monthly archives for a username.",
+    interfaceNotes:
+      "A landing page with a PGN importer and a Chess.com fetcher; an analyser view with the board, an eval bar, the engine's best line and a move navigator carrying a classification badge per move. Light and dark themes.",
+    technology:
+      "React 18, Vite and Tailwind CSS; chess.js for legality and PGN parsing, react-chessboard, framer-motion. A postinstall script copies the Stockfish NNUE assets into public/ so the engine is served same-origin and the Worker can load it without CORS.",
+    outcome:
+      "Full-game engine analysis with zero backend. Open a PGN and the engine is already warm.",
+    github: "https://github.com/Undefeated11/Chess_Analyser",
+    hue: 45,
+  },
 ];
 
 export type Experiment = {
@@ -169,6 +219,7 @@ export const experiments: Experiment[] = [
   { name: "YOUTUBE BACKEND", category: "API DESIGN", tech: "Node.js", status: "ARCHIVED", href: "https://github.com/Undefeated22/backend", x: 72, y: 55 },
   { name: "CASECOBRA", category: "E-COMMERCE", tech: "TypeScript", status: "ARCHIVED", href: "https://github.com/Undefeated22/casecobra", x: 88, y: 30 },
   { name: "FORMBRICKS × RN", category: "MOBILE SDK", tech: "Kotlin", status: "ARCHIVED", href: "https://github.com/Undefeated22/reactnative-formbricks", x: 24, y: 80 },
+  { name: "AMS", category: "DESKTOP APP", tech: "Java · Swing · MySQL", status: "ARCHIVED", href: "https://github.com/Undefeated11/Ams", x: 66, y: 84 },
 ];
 
 export const stack: { group: string; items: string[] }[] = [
