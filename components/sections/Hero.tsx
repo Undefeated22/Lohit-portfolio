@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { identity } from "@/data/portfolio";
-import Decode from "../ui/Decode";
+import { RevealLines } from "../ui/Reveal";
 import { scrollToSection as go } from "../SmoothScroll";
 import { emit } from "@/lib/commands";
 import { sim } from "@/lib/simStore";
@@ -48,10 +48,12 @@ export default function Hero() {
 
       <div className="mx-auto w-full max-w-[1600px]">
         <h1 className="type-display text-[clamp(2.75rem,8.4vw,7.5rem)]">
-          <Decode text={identity.name} className="block" />
-          <span className="block text-text-2">
-            <Decode text={identity.role.join(" ")} className="block text-[clamp(1.5rem,4.2vw,3.6rem)] font-medium" />
-          </span>
+          <RevealLines lines={[identity.name]} delay={0.1} />
+          <RevealLines
+            lines={[identity.role.join(" ")]}
+            delay={0.25}
+            className="text-[clamp(1.5rem,4.2vw,3.6rem)] font-medium text-text-2"
+          />
         </h1>
 
         <div className="mt-10 grid gap-8 md:grid-cols-[minmax(0,52ch)_1fr] md:items-end">
