@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Lenis from "lenis";
-import { world } from "@/lib/state";
+import { sim } from "@/lib/simStore";
 import { useReducedMotionSafe } from "@/lib/motion";
 
 export let lenisRef: Lenis | null = null;
@@ -18,26 +18,35 @@ export function scrollToSection(href: string) {
   el.focus({ preventScroll: true });
 }
 
+// Scroll is the simulator's clock: every scroll event maps the read head
+// to a tick, and each [data-phase] section owns one phase of the run.
 export default function SmoothScroll() {
   const reduced = useReducedMotionSafe();
 
   useEffect(() => {
-    const updateNative = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      world.scroll = max > 0 ? window.scrollY / max : 0;
+    sim.init();
+    const register = () => {
+      const els = Array.from(document.querySelectorAll<HTMLElement>("[data-phase]"));
+      sim.registerSections(els.map((el) => ({ phase: el.dataset.phase as never, el })));
+      sim.onScroll(window.scrollY, window.innerHeight);
     };
+    register();
+    const ro = new ResizeObserver(register);
+    ro.observe(document.body);
+    document.fonts?.ready.then(register);
 
     if (reduced) {
-      window.addEventListener("scroll", updateNative, { passive: true });
-      updateNative();
-      return () => window.removeEventListener("scroll", updateNative);
+      const onScroll = () => sim.onScroll(window.scrollY, window.innerHeight);
+      window.addEventListener("scroll", onScroll, { passive: true });
+      return () => {
+        window.removeEventListener("scroll", onScroll);
+        ro.disconnect();
+      };
     }
 
-    const lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1 });
+    const lenis = new Lenis({ lerp: 0.1 });
     lenisRef = lenis;
-    lenis.on("scroll", (e: { progress: number }) => {
-      world.scroll = e.progress;
-    });
+    lenis.on("scroll", (e: { scroll: number }) => sim.onScroll(e.scroll, window.innerHeight));
     let raf = 0;
     const loop = (t: number) => {
       lenis.raf(t);
@@ -48,6 +57,7 @@ export default function SmoothScroll() {
       cancelAnimationFrame(raf);
       lenis.destroy();
       lenisRef = null;
+      ro.disconnect();
     };
   }, [reduced]);
 

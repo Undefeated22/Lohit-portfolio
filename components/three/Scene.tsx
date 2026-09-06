@@ -1,46 +1,56 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { motion, useScroll, useTransform } from "framer-motion";
-import Core from "./Core";
+import { AdaptiveDpr, PerformanceMonitor } from "@react-three/drei";
+import { EffectComposer, Bloom, Noise, Vignette, SMAA } from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
+import Cluster from "./Cluster";
 import { useReducedMotionSafe } from "@/lib/motion";
 
-// One persistent scene behind the whole page — the site's single world.
+// One persistent drawing behind the whole page. DOM owns every word;
+// WebGL owns only the cluster. Post chain is tiered by measured performance.
 export default function Scene() {
   const reduced = useReducedMotionSafe();
-  const { scrollYProgress } = useScroll();
-  // mirrors the shader's rest glow and its smoothstep(0.82, 0.98) ignite —
-  // the page and the core catch fire together
-  const glow = useTransform(scrollYProgress, [0, 0.1, 0.82, 0.98], [0.16, 0.05, 0.05, 0.45]);
+  const [tier, setTier] = useState<0 | 1 | 2>(2);
+  const [dpr, setDpr] = useState(1.5);
+  const [eventSource, setEventSource] = useState<HTMLElement>();
+  useEffect(() => setEventSource(document.body), []);
 
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden>
+    <div className="fixed inset-0 z-0" aria-hidden>
       <Canvas
-        dpr={[1, 1.75]}
-        camera={{ position: [0, 0, 6.5], fov: 42 }}
+        dpr={dpr}
+        camera={{ position: [7, 7, 7], fov: 32, near: 0.5, far: 60 }}
         frameloop={reduced ? "demand" : "always"}
-        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        performance={{ min: 0.5 }}
+        gl={{ antialias: false, alpha: false, powerPreference: "high-performance", stencil: false }}
+        eventSource={eventSource}
+        eventPrefix="client"
+        style={{ pointerEvents: "none" }}
+        onCreated={({ gl }) => gl.setClearColor("#0b1f4f", 1)}
       >
-        <Core />
+        <color attach="background" args={["#0b1f4f"]} />
+        <fog attach="fog" args={["#0b1f4f", 9, 24]} />
+        <AdaptiveDpr pixelated />
+        <PerformanceMonitor
+          factor={1}
+          flipflops={3}
+          onChange={({ factor }) => setDpr(Math.round((0.75 + 0.75 * factor) * 4) / 4)}
+          onDecline={() => setTier((t) => Math.max(0, t - 1) as 0 | 1 | 2)}
+          onIncline={() => setTier((t) => Math.min(2, t + 1) as 0 | 1 | 2)}
+          onFallback={() => { setTier(0); setDpr(1); }}
+        />
+        <Cluster />
+        {!reduced && tier > 0 && (
+          <EffectComposer multisampling={0} resolutionScale={tier === 2 ? 1 : 0.75}>
+            <SMAA />
+            <Bloom mipmapBlur intensity={0.75} luminanceThreshold={1} luminanceSmoothing={0.2} />
+            <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.14} />
+            <Vignette eskil={false} offset={0.2} darkness={0.7} />
+          </EffectComposer>
+        )}
       </Canvas>
-      {/* the core's light spills onto the page, in sync with the shader */}
-      <motion.div
-        className="absolute inset-0"
-        style={{
-          opacity: reduced ? 0.08 : glow,
-          mixBlendMode: "screen",
-          background:
-            "radial-gradient(55% 42% at 50% 55%, rgba(255,92,31,0.30), transparent 70%)",
-        }}
-      />
-      {/* atmospheric vignette keeps edges quiet and type readable */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 60% at 50% 45%, transparent 40%, rgba(10,10,11,0.75) 100%)",
-        }}
-      />
     </div>
   );
 }

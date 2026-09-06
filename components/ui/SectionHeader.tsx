@@ -1,42 +1,43 @@
 "use client";
 
 import { Reveal } from "./Reveal";
+import Decode from "./Decode";
 
-// Shared section header: mono label left, oversized ghost index floating
-// behind the top-right — gives each section a depth anchor and a number
-// in the site's running order.
+// A drawing's title block: sheet number, phase, title, and a right-hand
+// readout — the same strip on every sheet, so the site reads as one set.
 export default function SectionHeader({
-  index,
-  label,
+  sheet,
+  phase,
+  title,
   sub,
   right,
 }: {
-  index: string;
-  label: string;
+  sheet: string;
+  phase: string;
+  title: string;
   sub?: string;
   right?: string;
 }) {
   return (
-    <div className="relative mb-14">
-      <span
-        aria-hidden
-        className="type-index pointer-events-none absolute -top-16 right-0 select-none text-[clamp(6rem,11vw,10rem)] font-medium leading-none text-fg/[0.05] md:-top-24"
-      >
-        {index}
-      </span>
-      <Reveal>
-        <div className="flex items-baseline justify-between gap-6">
-          <h2 className="type-label">{label}</h2>
+    <Reveal>
+      <div className="mb-14 border-y border-line">
+        <div className="flex flex-wrap items-stretch">
+          <div className="type-label flex items-center gap-3 border-r border-line py-3 pr-5">
+            <span className="text-text">SHEET {sheet}</span>
+            <span>/ 06</span>
+          </div>
+          <div className="type-label flex items-center border-r border-line px-5 py-3">
+            PHASE — <span className="ml-2 text-text">{phase}</span>
+          </div>
           {right && (
-            <span className="type-index relative text-[11px] text-fg-faint">{right}</span>
+            <div className="type-label ml-auto hidden items-center py-3 md:flex">{right}</div>
           )}
         </div>
-      </Reveal>
-      {sub && (
-        <Reveal delay={0.08}>
-          <p className="mt-4 max-w-md text-fg-dim">{sub}</p>
-        </Reveal>
-      )}
-    </div>
+        <div className="border-t border-line py-6">
+          <Decode as="h2" text={title} className="type-h2 text-[clamp(1.75rem,4vw,3rem)]" />
+          {sub && <p className="mt-3 max-w-[64ch] text-text-2">{sub}</p>}
+        </div>
+      </div>
+    </Reveal>
   );
 }

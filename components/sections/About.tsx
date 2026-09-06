@@ -2,95 +2,97 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { about } from "@/data/portfolio";
+import { about, stack, projects } from "@/data/portfolio";
 import { Reveal } from "../ui/Reveal";
 import SectionHeader from "../ui/SectionHeader";
 import { world } from "@/lib/state";
+import { EASE } from "@/lib/motion";
 
-const EASE = [0.16, 1, 0.3, 1] as const;
+// SHEET 02 — LEASE ACQUIRE. Four facets = four shard quadrants being
+// claimed; hovering one lights its quadrant on the drawing. The stack is
+// the sheet's bill of materials.
+const usage = new Map<string, number>();
+for (const p of projects) for (const t of p.tech) usage.set(t, (usage.get(t) ?? 0) + 1);
 
-// Hovering a facet warms the 3D core behind the page (world.facet → shader).
 export default function About() {
   const [active, setActive] = useState(0);
-
-  const set = (i: number) => {
-    setActive(i);
-    world.facet = i;
-  };
+  const set = (i: number) => { setActive(i); world.facet = i; };
 
   return (
-    <section
-      id="about"
-      aria-label="About"
-      className="relative px-5 py-32 md:px-10 md:py-44"
-    >
+    <section id="about" data-phase="lease" aria-label="About" className="relative bg-bg-deep/60 px-5 py-28 md:px-8 md:py-36">
       <div className="mx-auto max-w-[1600px]">
-        <SectionHeader index="02" label="ABOUT — THE OPERATOR" />
-      </div>
-      <div className="mx-auto grid max-w-[1600px] gap-16 md:grid-cols-2 md:gap-24">
-        <div>
-          <Reveal delay={0.1}>
-            <p className="max-w-xl text-2xl leading-snug text-fg md:text-[2rem]">
-              {about.intro}
-            </p>
+        <SectionHeader sheet="02" phase="LEASE ACQUIRE" title="The operator" right="4 SHARDS · FENCING TOKEN = 1" />
+
+        <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-20">
+          <Reveal>
+            <p className="type-h3 max-w-[30ch] text-[clamp(1.35rem,2.4vw,2rem)] leading-[1.25] text-text">{about.intro}</p>
+            <p className="type-note mt-8">Hover a shard → its quadrant lights up on the drawing.</p>
           </Reveal>
-        </div>
 
-        <div
-          className="md:mt-24"
-          onMouseLeave={() => (world.facet = -1)}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) world.facet = -1;
-          }}
-        >
-          <ul className="border-t border-line">
+          <div
+            className="grid grid-cols-2 gap-px bg-line"
+            onMouseLeave={() => (world.facet = -1)}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) world.facet = -1; }}
+          >
             {about.facets.map((f, i) => (
-              <li key={f.key} className="border-b border-line">
-                <button
-                  className="group flex w-full items-baseline justify-between py-5 text-left"
-                  onMouseEnter={() => set(i)}
-                  onFocus={() => set(i)}
-                  onClick={() => set(i)}
-                  aria-current={active === i}
-                >
-                  <span
-                    className={`type-display text-4xl transition-[color,transform] duration-300 md:text-6xl ${
-                      active === i
-                        ? "translate-x-2 text-fg md:translate-x-3"
-                        : "text-fg-faint group-hover:text-fg-dim"
-                    }`}
-                  >
-                    {f.key}
-                  </span>
-                  <span
-                    className={`type-index text-[11px] transition-colors duration-300 ${
-                      active === i ? "text-ember" : "text-fg-faint"
-                    }`}
-                  >
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <div className="relative mt-8 min-h-[7rem]" aria-live="polite">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.45, ease: EASE }}
+              <button
+                key={f.key}
+                onMouseEnter={() => set(i)}
+                onFocus={() => set(i)}
+                onClick={() => set(i)}
+                aria-current={active === i}
+                className={`group relative min-h-[9rem] bg-bg p-5 text-left transition-colors duration-300 ${active === i ? "bg-surface" : "hover:bg-surface/60"}`}
               >
-                <h3 className="type-label mb-2 text-ember">{about.facets[active].title}</h3>
-                <p className="max-w-md leading-relaxed text-fg-dim">
-                  {about.facets[active].body}
-                </p>
-              </motion.div>
-            </AnimatePresence>
+                <span className="type-label">SHARD {String(i).padStart(2, "0")}</span>
+                <span className={`type-h2 mt-3 block text-[clamp(1.4rem,2.6vw,2.2rem)] transition-colors ${active === i ? "text-accent" : "text-text"}`}>
+                  {f.key}
+                </span>
+                <span className="type-label absolute right-4 top-5">{active === i ? "HELD" : "IDLE"}</span>
+              </button>
+            ))}
           </div>
         </div>
+
+        <div className="relative mt-10 min-h-[7rem] border-t border-line pt-6" aria-live="polite">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.4, ease: EASE }}
+              className="grid gap-3 md:grid-cols-[220px_1fr]"
+            >
+              <h3 className="type-label text-accent">{about.facets[active].title}</h3>
+              <p className="max-w-[64ch] text-text-2">{about.facets[active].body}</p>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* bill of materials */}
+        <Reveal className="mt-24">
+          <div className="type-label mb-4 flex items-baseline justify-between border-b border-line pb-3">
+            <span className="text-text">BILL OF MATERIALS</span>
+            <span>×N = SHIPPED IN N PROJECTS</span>
+          </div>
+          <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+            {stack.map((g) => (
+              <div key={g.group} className="border-l border-line pl-4">
+                <dt className="type-label text-accent">{g.group}</dt>
+                <dd className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  {g.items.map((it) => {
+                    const n = usage.get(it);
+                    return (
+                      <span key={it} className={n ? "text-text" : "text-label"}>
+                        {it}{n ? <sup className="ml-0.5 text-[10px] text-accent">×{n}</sup> : null}
+                      </span>
+                    );
+                  })}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </Reveal>
       </div>
     </section>
   );

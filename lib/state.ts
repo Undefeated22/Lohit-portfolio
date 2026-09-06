@@ -1,11 +1,8 @@
-// Tiny mutable bridge between the DOM world and the 3D core.
+// Tiny mutable bridge between the DOM and the WebGL cluster.
 // Read every frame inside useFrame — no React state, no re-renders.
 export const world = {
-  scroll: 0, // overall page progress 0..1
-  facet: -1, // hovered About facet index, -1 = none
-  cursorEnergy: 0, // 0..1, spikes with pointer velocity
-  pointerX: 0, // normalized -1..1 (canvas is pointer-events-none, so we feed it)
-  pointerY: 0,
-  hue: 18, // hue of the project currently centered in the work gallery
-  crash: 0, // signature interaction: 1 while the user holds the crash button
+  facet: -1, // hovered About facet → its shard quadrant lights up (-1 = none)
+  hoverTile: -1, // tile under the pointer (for the "hold to kill" caption)
+  holdProgress: 0, // 0..1 while the pointer is held on a tile
+  project: null as string | null, // open case-study slug → camera dives to its workflow
 };

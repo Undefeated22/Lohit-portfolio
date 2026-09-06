@@ -1,86 +1,88 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useState } from "react";
 import { journey, education } from "@/data/portfolio";
 import { Reveal } from "../ui/Reveal";
 import SectionHeader from "../ui/SectionHeader";
+import { sim, useSimSelector } from "@/lib/simStore";
 
-// Typeset as an actual log: status tokens, mono timestamps, and a progress
-// line that draws itself down the section as you scroll it.
-export default function Journey() {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 75%", "end 60%"],
-  });
-  const scaleY = useTransform(scrollYProgress, [0, 1], [0, 1]);
-
+// SHEET 05 — SHRINK. The runtime log, plus the shrink instrument: delta-
+// debug the faults you injected down to the minimal failing set — the
+// same idea dex used to turn 44 faults into 2.
+function Shrinker() {
+  const faults = useSimSelector((s) => s.faults);
+  const [result, setResult] = useState<ReturnType<typeof sim.shrink> | null>(null);
+  const run = () => setResult(sim.shrink());
   return (
-    <section aria-label="Experience" className="relative px-5 py-32 md:px-10 md:py-44">
+    <div className="rule bg-bg p-5 md:p-6">
+      <div className="type-label mb-4 flex items-baseline justify-between">
+        <span className="text-text">SHRINK INSTRUMENT</span>
+        <span>ddmin · illustrative model of dex's simulator</span>
+      </div>
+      <p className="max-w-[60ch] text-sm text-text-2">
+        {faults === 0
+          ? "No faults in this run yet. Hold any node on the drawing to kill it (or press K), then shrink."
+          : `${faults} fault${faults === 1 ? "" : "s"} injected so far — including the seed's own chaos. Shrink finds the smallest subset that still makes a shard unavailable.`}
+      </p>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <button onClick={run} disabled={faults === 0} className="btn btn-stamp disabled:cursor-not-allowed disabled:opacity-40">
+          SHRINK FAULTS
+        </button>
+        <button onClick={() => sim.killAny()} className="btn">KILL A NODE</button>
+      </div>
+      <div role="status" className="mt-5 min-h-[1.5rem] font-mono text-sm">
+        {result && (result.from === 0 ? (
+          <span className="text-label">nothing to shrink</span>
+        ) : result.to === 0 ? (
+          <span className="text-text-2">{result.from} faults, but the cluster never lost a shard — every lease found a live neighbour.</span>
+        ) : (
+          <span className="text-text">
+            <span className="text-accent">{result.from} → {result.to}</span> in {result.steps} runs · minimal set: nodes {result.tiles.join(", ")}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Journey() {
+  return (
+    <section id="journey" data-phase="shrink" aria-label="Experience" className="relative px-5 py-28 md:px-8 md:py-36">
       <div className="mx-auto max-w-[1600px]">
-        <SectionHeader index="05" label="THE JOURNEY — RUNTIME LOG" />
-
-        <div ref={ref} className="relative ml-1">
-          <div className="absolute inset-y-0 left-0 w-px bg-line" aria-hidden />
-          <motion.div
-            className="absolute left-0 top-0 w-px origin-top bg-ember"
-            style={{ scaleY, height: "100%" }}
-            aria-hidden
-          />
-
-          <ol className="space-y-16 pl-8 md:pl-16">
-            {journey.map((m, i) => (
-              <li key={i} className="relative">
-                {/* log delimiter committed as the ember line passes it */}
-                <span
-                  aria-hidden
-                  className={`absolute -left-8 top-2 size-[5px] -translate-x-1/2 rotate-45 md:-left-16 ${
-                    m.status === "ACTIVE" ? "bg-ember" : "bg-fg-faint"
-                  }`}
-                />
+        <SectionHeader sheet="05" phase="SHRINK" title="Runtime log" right="REVERSE CHRONOLOGICAL" />
+        <div className="grid gap-16 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <div>
+            <ol className="border-t border-line">
+              {journey.map((m, i) => (
+                <li key={i} className="grid gap-3 border-b border-line py-8 md:grid-cols-[220px_1fr] md:gap-10">
+                  <Reveal>
+                    <span className="type-index block text-[12px] text-accent">{m.period}</span>
+                    <span className="type-label mt-1 flex items-center gap-2">
+                      <span className={`size-1.5 ${m.status === "ACTIVE" ? "bg-accent pulse-dot" : "bg-label"}`} aria-hidden />
+                      {m.status}
+                    </span>
+                  </Reveal>
+                  <Reveal delay={0.05}>
+                    <h3 className="type-h3 text-xl md:text-2xl">{m.role}</h3>
+                    <p className="type-label mt-1">{m.org}</p>
+                    <p className="mt-3 max-w-[60ch] text-sm text-text-2">{m.note}</p>
+                  </Reveal>
+                </li>
+              ))}
+              <li className="grid gap-3 py-8 md:grid-cols-[220px_1fr] md:gap-10">
+                <Reveal>
+                  <span className="type-index block text-[12px] text-accent">{education.period}</span>
+                  <span className="type-label mt-1 block">EDUCATION</span>
+                </Reveal>
                 <Reveal delay={0.05}>
-                  <div className="grid gap-2 md:grid-cols-[220px_1fr] md:gap-10">
-                    <div className="flex flex-col gap-1.5">
-                      <span className="type-index text-[12px] text-ember">{m.period}</span>
-                      <span className="type-label flex items-center gap-2 text-fg-faint">
-                        {m.status === "ACTIVE" ? (
-                          <span className="size-1.5 rounded-full bg-ok pulse-dot" aria-hidden />
-                        ) : (
-                          <span className="size-1.5 rounded-full bg-fg-faint" aria-hidden />
-                        )}
-                        {m.status}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="type-display text-2xl md:text-3xl">{m.role}</h3>
-                      <p className="type-label mt-1.5">{m.org}</p>
-                      <p className="mt-3 max-w-lg text-sm leading-relaxed text-fg-dim">
-                        {m.note}
-                      </p>
-                    </div>
-                  </div>
+                  <h3 className="type-h3 text-xl md:text-2xl">{education.degree}</h3>
+                  <p className="type-label mt-1">{education.school}</p>
+                  <p className="mt-3 max-w-[60ch] text-sm text-text-2">{education.note}</p>
                 </Reveal>
               </li>
-            ))}
-          </ol>
-
-          {/* education runs on its own track below the work log */}
-          <Reveal delay={0.05}>
-            <div className="mt-20 grid gap-2 border-t border-line pl-8 pt-10 md:grid-cols-[220px_1fr] md:gap-10 md:pl-16">
-              <div className="flex flex-col gap-1.5">
-                <span className="type-index text-[12px] text-ember">{education.period}</span>
-                <span className="type-label text-fg-faint">EDUCATION</span>
-              </div>
-              <div>
-                <h3 className="type-display text-2xl md:text-3xl">{education.degree}</h3>
-                <p className="type-label mt-1.5">{education.school}</p>
-                <p className="mt-3 max-w-lg text-sm leading-relaxed text-fg-dim">
-                  {education.note}
-                </p>
-              </div>
-            </div>
-          </Reveal>
+            </ol>
+          </div>
+          <Reveal delay={0.1}><Shrinker /></Reveal>
         </div>
       </div>
     </section>

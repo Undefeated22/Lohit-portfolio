@@ -10,44 +10,23 @@ export default function OpengraphImage() {
     (
       <div
         style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: 72,
-          background: "#0a0a0b",
-          color: "#ece9e2",
-          fontFamily: "sans-serif",
+          width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          padding: 72, background: "#0b1f4f", color: "#eef3ff", fontFamily: "monospace",
+          backgroundImage: "linear-gradient(to right, #2a4a93 1px, transparent 1px), linear-gradient(to bottom, #2a4a93 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: 999,
-              background: "#ff5c1f",
-            }}
-          />
-          <div style={{ fontSize: 24, letterSpacing: 4, color: "#8f8c85" }}>
-            SYSTEM ONLINE — PORTFOLIO / 2026
-          </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 22, letterSpacing: 4, color: "#8a9ccb" }}>
+          <div>SHEET 01 / 06 — BOOT</div>
+          <div>SEED 0x2A9F · TICK 000000</div>
         </div>
-
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", fontSize: 160, fontWeight: 700, lineHeight: 0.95, letterSpacing: -6 }}>
-            {identity.name}
-            <span style={{ color: "#ff5c1f" }}>.</span>
-          </div>
-          <div style={{ fontSize: 52, fontWeight: 700, color: "#8f8c85", letterSpacing: -1 }}>
-            {identity.role.join(" ")}
-          </div>
+          <div style={{ display: "flex", fontSize: 150, fontWeight: 700, lineHeight: 0.95, letterSpacing: -4 }}>{identity.name}</div>
+          <div style={{ display: "flex", fontSize: 44, color: "#b7c6ea", marginTop: 12 }}>{identity.role.join(" ")}</div>
         </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 22, color: "#7d7a73", letterSpacing: 3 }}>
-          <div>FORGE / DEX / REAL-TIME SYSTEMS</div>
-          <div>NODE.JS — GO — POSTGRESQL</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 22, letterSpacing: 3, color: "#8a9ccb" }}>
+          <div>SYSTEMS THAT SURVIVE FAILURE — DEX · FORGE · A4</div>
+          <div style={{ background: "#ffd23f", color: "#0b1f4f", padding: "8px 16px", fontWeight: 700 }}>OPEN TO WORK</div>
         </div>
       </div>
     ),
