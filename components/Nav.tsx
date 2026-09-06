@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { identity } from "@/data/portfolio";
 import { lenisRef, scrollToSection as go } from "./SmoothScroll";
 import { emit } from "@/lib/commands";
-import { sim } from "@/lib/simStore";
+import { sim, useSimSelector } from "@/lib/simStore";
 import { EASE } from "@/lib/motion";
 
 const LINKS = [
@@ -19,19 +19,16 @@ const LINKS = [
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const [time, setTime] = useState("");
   const [section, setSection] = useState("top");
   const [seed, setSeed] = useState("");
+  const phase = useSimSelector((s) => s.phase);
+  const faults = useSimSelector((s) => s.faults);
   const menuBtn = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll, { passive: true });
-    const tick = () =>
-      setTime(new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour12: false, hour: "2-digit", minute: "2-digit" }));
-    tick();
-    const id = setInterval(tick, 15_000);
     setSeed(sim.seedHex);
     const unsub = sim.subscribe(() => setSeed(sim.seedHex));
     const obs = new IntersectionObserver(
@@ -44,7 +41,6 @@ export default function Nav() {
     });
     return () => {
       window.removeEventListener("scroll", onScroll);
-      clearInterval(id);
       unsub();
       obs.disconnect();
     };
@@ -89,6 +85,7 @@ export default function Nav() {
         >
           <span className="type-display text-[15px] tracking-tight">{identity.name}</span>
           <span className="type-label hidden sm:inline">run {seed}</span>
+          <span className="type-label sm:hidden">{phase}{faults ? ` · ${faults} faults` : ""}</span>
         </a>
 
         <div className="hidden items-center gap-7 md:flex">
@@ -104,7 +101,7 @@ export default function Nav() {
               >
                 {l.label}
                 {active && (
-                  <motion.span layoutId="nav-active" className="absolute -bottom-1.5 left-0 h-px w-full bg-accent" transition={{ duration: 0.4, ease: EASE }} />
+                  <motion.span layoutId="nav-active" className="absolute -bottom-1.5 left-0 h-px w-full bg-text" transition={{ duration: 0.4, ease: EASE }} />
                 )}
               </a>
             );
@@ -120,9 +117,8 @@ export default function Nav() {
             <kbd className="font-mono">⌘K</kbd>
           </button>
           <span className="type-label flex items-center gap-2">
-            <span className="size-1.5 bg-accent pulse-dot" />
+            <span className="size-1.5 bg-text" aria-hidden />
             {identity.availability}
-            {time && <span className="text-label">/ {time} IST</span>}
           </span>
         </div>
 
@@ -173,7 +169,7 @@ export default function Nav() {
               <a href={identity.resumeUrl} target="_blank" rel="noreferrer" className="type-label mt-4 text-text">RESUME ↗</a>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="type-label flex items-center gap-2"><span className="size-1.5 bg-accent pulse-dot" />{identity.availability}</span>
+              <span className="type-label flex items-center gap-2"><span className="size-1.5 bg-text" aria-hidden />{identity.availability}</span>
               <a href={`mailto:${identity.email}`} className="type-label text-accent">{identity.email}</a>
             </div>
           </motion.div>

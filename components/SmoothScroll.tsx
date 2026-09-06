@@ -25,6 +25,7 @@ export default function SmoothScroll() {
 
   useEffect(() => {
     sim.init();
+    const seedTimer = setTimeout(() => sim.publishSeed(), 0);
     const register = () => {
       const els = Array.from(document.querySelectorAll<HTMLElement>("[data-phase]"));
       sim.registerSections(els.map((el) => ({ phase: el.dataset.phase as never, el })));
@@ -41,6 +42,7 @@ export default function SmoothScroll() {
       return () => {
         window.removeEventListener("scroll", onScroll);
         ro.disconnect();
+        clearTimeout(seedTimer);
       };
     }
 
@@ -58,6 +60,7 @@ export default function SmoothScroll() {
       lenis.destroy();
       lenisRef = null;
       ro.disconnect();
+      clearTimeout(seedTimer);
     };
   }, [reduced]);
 

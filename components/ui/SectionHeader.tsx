@@ -1,7 +1,6 @@
 "use client";
 
 import { Reveal } from "./Reveal";
-import Decode from "./Decode";
 
 // A drawing's title block: sheet number, phase, title, and a right-hand
 // readout — the same strip on every sheet, so the site reads as one set.
@@ -34,7 +33,7 @@ export default function SectionHeader({
           )}
         </div>
         <div className="border-t border-line py-6">
-          <Decode as="h2" text={title} className="type-h2 text-[clamp(1.75rem,4vw,3rem)]" />
+          <h2 className="type-h2 text-[clamp(1.75rem,4vw,3rem)]">{title}</h2>
           {sub && <p className="mt-3 max-w-[64ch] text-text-2">{sub}</p>}
         </div>
       </div>

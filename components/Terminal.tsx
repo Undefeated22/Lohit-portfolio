@@ -6,6 +6,7 @@ import { commands, openProject } from "@/lib/commands";
 import { sim } from "@/lib/simStore";
 import { fetchFeed, ago } from "@/lib/github";
 import { lenisRef, scrollToSection } from "./SmoothScroll";
+import { shortcutsEnabled, typingTarget } from "@/lib/shortcuts";
 
 // A line editor, not a VT emulator: the same command registry as the
 // palette, plus a few shell-flavoured aliases. Output is real HTML.
@@ -25,9 +26,7 @@ export default function Terminal() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null;
-      const editing = !!t?.closest?.("input, textarea, [contenteditable]");
-      if (e.key === "/" && !editing && !e.metaKey && !e.ctrlKey) {
+      if (e.key === "/" && shortcutsEnabled() && !typingTarget(e) && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setOpen(true);
       }
@@ -41,9 +40,17 @@ export default function Terminal() {
     };
   }, []);
 
+  const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (open) requestAnimationFrame(() => input.current?.focus());
-    lenisRef?.[open ? "stop" : "start"]();
+    if (open) {
+      opener.current = document.activeElement as HTMLElement | null;
+      requestAnimationFrame(() => input.current?.focus());
+      lenisRef?.stop();
+    } else {
+      lenisRef?.start();
+      opener.current?.focus?.();
+      opener.current = null;
+    }
   }, [open]);
 
   useEffect(() => {
@@ -127,10 +134,10 @@ export default function Terminal() {
         <h2 id="term-h" className="type-label text-text">terminal — lohit.sys</h2>
         <button onClick={() => setOpen(false)} className="type-label link text-text">close (esc)</button>
       </div>
-      <div ref={log} role="log" aria-live="polite" className="flex-1 overflow-y-auto px-4 py-3 font-mono text-[13px] leading-relaxed">
+      <div ref={log} role="log" aria-live="polite" tabIndex={0} className="flex-1 overflow-y-auto px-4 py-3 font-mono text-[13px] leading-relaxed">
         {lines.map((l, i) => (
           <div key={i}>
-            {l.prompt !== undefined && <div className="text-label"><span className="text-accent">$ </span>{l.prompt}</div>}
+            {l.prompt !== undefined && <div className="text-label"><span className="text-label">$ </span>{l.prompt}</div>}
             {l.out && <pre className={`whitespace-pre-wrap ${l.kind === "err" ? "text-accent" : l.kind === "ok" ? "text-text" : "text-text-2"}`}>{l.out}</pre>}
           </div>
         ))}
@@ -140,7 +147,7 @@ export default function Terminal() {
         onSubmit={(e) => { e.preventDefault(); const v = value; setValue(""); exec(v); }}
       >
         <label htmlFor="cmd" className="sr-only">Command</label>
-        <span className="text-accent">$</span>
+        <span className="text-label">$</span>
         <input
           ref={input}
           id="cmd"
@@ -148,7 +155,7 @@ export default function Terminal() {
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Escape") setOpen(false);
-            else if (e.key === "Tab" && value) { e.preventDefault(); complete(); }
+            else if (e.key === "Tab" && !e.shiftKey && value) { e.preventDefault(); complete(); }
             else if (e.key === "ArrowUp") { e.preventDefault(); const h = history.current; if (!h.length) return; hIdx.current = hIdx.current < 0 ? h.length - 1 : Math.max(0, hIdx.current - 1); setValue(h[hIdx.current]); }
             else if (e.key === "ArrowDown") { e.preventDefault(); const h = history.current; if (hIdx.current < 0) return; hIdx.current = Math.min(h.length, hIdx.current + 1); setValue(h[hIdx.current] ?? ""); }
             else if (e.key === "l" && e.ctrlKey) { e.preventDefault(); setLines([]); }

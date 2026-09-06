@@ -104,14 +104,12 @@
   .rule-chalk {
     border: 1px solid var(--color-text);
   }
-  .shadow-hard {
-    box-shadow: 4px 4px 0 var(--color-accent);
-  }
   .shadow-hard-chalk {
     box-shadow: 4px 4px 0 var(--color-text);
   }
 
-  /* buttons: zero radius, mono caps, chalk rule; primary is a yellow stamp */
+  /* buttons: zero radius, mono caps, chalk rule; the primary action is the
+     one place yellow appears outside fault states */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -132,13 +130,13 @@
     transform: translate(-2px, -2px);
     box-shadow: 4px 4px 0 var(--color-text);
   }
-  .btn-stamp {
+  .btn-primary {
     background: var(--color-accent);
     border-color: var(--color-accent);
     color: var(--color-bg);
   }
-  .btn-stamp:hover,
-  .btn-stamp:focus-visible {
+  .btn-primary:hover,
+  .btn-primary:focus-visible {
     box-shadow: 4px 4px 0 var(--color-text);
   }
 
@@ -165,24 +163,20 @@
     background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
   }
 
-  /* cyanotype paper texture */
-  .paper::before {
-    content: "";
-    position: fixed;
-    inset: -50%;
-    width: 200%;
-    height: 200%;
-    pointer-events: none;
-    z-index: 80;
-    opacity: 0.035;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* index labels: seq numbers, dates, ticks — tabular mono */
+  .type-index {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
   }
 
-  /* yellow FAULT stamp — rotated, hard-edged, only for fault states */
-  .stamp {
+  /* tag: a chalk stamp. .tag-fault is the only yellow tag — fault states only. */
+  .tag {
     display: inline-block;
     padding: 0.2rem 0.5rem;
-    background: var(--color-accent);
+    background: var(--color-text);
     color: var(--color-bg);
     font-family: var(--font-mono);
     font-weight: 700;
@@ -191,24 +185,11 @@
     text-transform: uppercase;
     transform: rotate(-3deg);
   }
-
-  .pulse-dot {
-    animation: pulse-dot 2.4s var(--ease-in-out-soft) infinite;
+  .tag-fault {
+    background: var(--color-accent);
   }
-  .blink {
-    animation: blink 1s steps(2) infinite;
-  }
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-@keyframes blink {
-  to { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pulse-dot, .blink { animation: none; }
   html { scroll-behavior: auto; }
 }

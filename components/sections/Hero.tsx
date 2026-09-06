@@ -59,7 +59,7 @@ export default function Hero() {
             {identity.statement}
           </motion.p>
           <motion.div {...rise(0.75)} className="flex flex-wrap items-center gap-3 md:justify-end">
-            <button onClick={() => go("#about")} className="btn btn-stamp" data-cursor="RUN">
+            <button onClick={() => go("#about")} className="btn btn-primary">
               EXPLORE THE RUN ↓
             </button>
             <button onClick={() => emit("lohit:terminal")} className="btn">
@@ -71,7 +71,7 @@ export default function Hero() {
         <motion.p {...rise(1.1)} className="type-note mt-10 max-w-[60ch]">
           This page is a simulation of a shard cluster, run from seed {seed}. Scroll advances the clock; scrolling
           back rewinds it. Hold any node to kill it — then watch the lease move and the stale write get fenced.
-          Share the URL and anyone sees the same run.
+          The seed is in the URL: send it and anyone sees the same untouched run.
         </motion.p>
       </div>
     </section>

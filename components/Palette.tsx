@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { commands, search, type Command } from "@/lib/commands";
+import { commands, search, type Command, emit } from "@/lib/commands";
+import { shortcutsEnabled, typingTarget } from "@/lib/shortcuts";
 
 // ⌘K on a native <dialog>: top layer, Escape, backdrop and focus containment
 // for free; APG combobox semantics inside. Zero dependencies.
@@ -27,6 +28,16 @@ export default function Palette() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         dialog.current?.open ? close() : open();
+        return;
+      }
+      // single-key shortcuts declared on commands (K = kill, S = shrink) —
+      // never while typing, never with modifiers, never inside the palette
+      if (typingTarget(e) || !shortcutsEnabled() || e.metaKey || e.ctrlKey || e.altKey || e.key.length !== 1) return;
+      const cmd = commands.find((c) => c.shortcut && c.shortcut !== "/" && c.shortcut.toLowerCase() === e.key.toLowerCase());
+      if (cmd) {
+        e.preventDefault();
+        const out = cmd.run();
+        if (typeof out === "string") emit("lohit:notice", out);
       }
     };
     const onEmit = () => open();
@@ -46,6 +57,10 @@ export default function Palette() {
     } else close();
   };
 
+  useEffect(() => {
+    document.getElementById(items[active] ? `pal-${items[active].id}` : "")?.scrollIntoView({ block: "nearest" });
+  }, [active, items]);
+
   const groups = useMemo(() => {
     const m = new Map<string, Command[]>();
     items.forEach((c) => m.set(c.group, [...(m.get(c.group) ?? []), c]));
@@ -63,7 +78,7 @@ export default function Palette() {
       <style>{`@keyframes pal-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
       <div className="rule-chalk">
         <div className="flex items-center gap-3 border-b border-line px-4">
-          <span className="type-label text-accent">›</span>
+          <span className="type-label">›</span>
           <input
             ref={input}
             role="combobox"
@@ -91,7 +106,7 @@ export default function Palette() {
         <ul id="pal-list" role="listbox" className="max-h-[50vh] overflow-y-auto py-2">
           {groups.map(([group, cmds]) => (
             <li key={group} role="presentation">
-              <div className="type-label px-4 pb-1 pt-3">{group}</div>
+              <div className="type-label px-4 pb-1 pt-3" aria-hidden>{group}</div>
               <ul role="group" aria-label={group}>
                 {cmds.map((c) => {
                   const i = items.indexOf(c);
@@ -117,8 +132,8 @@ export default function Palette() {
           ))}
           {!items.length && <li className="px-4 py-3 text-sm text-label">no command matches “{q}”</li>}
         </ul>
-        <div role="status" className="type-label border-t border-line px-4 py-2 text-accent">
-          {result || `${items.length} commands`}
+        <div role="status" className={`type-label border-t border-line px-4 py-2 ${result ? "text-accent" : ""}`}>
+          {result || `${items.length} commands · ↑↓ enter esc`}
         </div>
       </div>
     </dialog>

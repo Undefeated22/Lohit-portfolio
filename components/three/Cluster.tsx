@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { sim } from "@/lib/simStore";
 import { world } from "@/lib/state";
-import { GRID, N, PHASES, phaseAt } from "@/lib/sim";
+import { GRID, N, PHASES, phaseAt, phaseStart } from "@/lib/sim";
 import { projects } from "@/data/portfolio";
 
 // ── palette as linear-ish colours (bloom reads values > 1) ──
@@ -19,6 +19,7 @@ const CAUTION = new THREE.Color("#ffd23f");
 const TILE = Array.from({ length: N }, (_, i) => ({ x: (i % GRID) - (GRID - 1) / 2, z: Math.floor(i / GRID) - (GRID - 1) / 2 }));
 const tilePos = (i: number) => TILE[i];
 const HOLD_MS = 650;
+const WF_START = phaseStart("workflows");
 
 // drafting grid + dithered under-glow on the ground plane
 const groundVert = /* glsl */ `
@@ -57,7 +58,7 @@ void main(){
 }`;
 
 export default function Cluster() {
-  const { camera, size } = useThree();
+  const { camera, size, invalidate } = useThree();
   const slabs = useRef<THREE.InstancedMesh>(null!);
   const rings = useRef<THREE.InstancedMesh>(null!);
   const flags = useRef<THREE.InstancedMesh>(null!);
@@ -105,8 +106,9 @@ export default function Cluster() {
     return out;
   }, []);
 
-  // lay out static matrices once
-  useEffect(() => {
+  // lay out static matrices before the first frame (a frame or a raycast
+  // landing between commit and a passive effect would see identity matrices)
+  useLayoutEffect(() => {
     for (let i = 0; i < N; i++) {
       const p = tilePos(i);
       tmp.position.set(p.x, 0, p.z);
@@ -117,13 +119,15 @@ export default function Cluster() {
     }
     slabs.current.instanceMatrix.needsUpdate = true;
     if (slabs.current.instanceColor) slabs.current.instanceColor.needsUpdate = true;
+    slabs.current.computeBoundingSphere();
   }, [tmp]);
 
+  const overUI = (e: ThreeEvent<PointerEvent>) =>
+    !!(e.nativeEvent.target as Element | null)?.closest("a, button, input, textarea, [role='dialog'], [data-ui]");
   const onDown = (e: ThreeEvent<PointerEvent>) => {
-    const target = e.nativeEvent.target as Element | null;
-    if (target?.closest("a, button, input, textarea, [role='dialog'], [data-ui]")) return;
-    if (e.instanceId === undefined) return;
+    if (overUI(e) || e.instanceId === undefined) return;
     if (!sim.snapshot.alive[e.instanceId] || sim.snapshot.power[e.instanceId] < 0.5) return;
+    if (frameloopRef.current === "demand") { sim.kill(e.instanceId); return; } // no frames to animate a hold
     hold.current = { tile: e.instanceId, since: performance.now() };
   };
   const onUp = () => {
@@ -140,6 +144,8 @@ export default function Cluster() {
   }, []);
 
   const firstFrame = useRef(true);
+  const frameloopRef = useRef<string>("always");
+  const lookCur = useMemo(() => new THREE.Vector3(), []);
   useFrame((_state, rawDelta) => {
     const delta = Math.min(rawDelta, 1 / 30);
     const s = sim.snapshot;
@@ -221,9 +227,8 @@ export default function Cluster() {
     workers.current.instanceMatrix.needsUpdate = true;
 
     // ── workflow heads: crawl their paths, hue per project, bloom ──
-    const wfStart = PHASES.slice(0, PHASES.indexOf("workflows")).reduce((a, p) => a + { boot: 240, lease: 240, workflows: 600, faults: 360, shrink: 240, exit: 200 }[p], 0);
     run.workflows.forEach((w, k) => {
-      const t = tick - wfStart - w.startAt;
+      const t = tick - WF_START - w.startAt;
       let vis = 0;
       let x = 0, z = 0;
       if (t >= 0) {
@@ -290,11 +295,13 @@ export default function Cluster() {
       lookAt.z + dist * Math.cos(pitch) * Math.cos(yaw)
     );
     // first frame and on-demand (reduced motion) frames snap; otherwise damp
+    frameloopRef.current = _state.frameloop;
     const snap = firstFrame.current || _state.frameloop === "demand";
     firstFrame.current = false;
     const k = snap ? 1 : 1 - Math.exp(-3.2 * delta);
     camera.position.lerp(camTarget, k);
-    camera.lookAt(lookAt);
+    lookCur.lerp(lookAt, k);
+    camera.lookAt(lookCur);
   });
 
   return (
@@ -324,16 +331,20 @@ export default function Cluster() {
       <instancedMesh
         ref={slabs}
         args={[undefined, undefined, N]}
+        frustumCulled={false}
         onPointerDown={onDown}
         onPointerOver={(e) => {
-          if (e.instanceId !== undefined) {
-            world.hoverTile = e.instanceId;
-            document.body.style.cursor = "crosshair";
-          }
+          if (overUI(e) || e.instanceId === undefined || !sim.snapshot.alive[e.instanceId] || sim.snapshot.power[e.instanceId] < 0.5) return;
+          world.hoverTile = e.instanceId;
+          document.body.style.cursor = "crosshair";
+          invalidate();
         }}
         onPointerOut={() => {
           world.hoverTile = -1;
           document.body.style.cursor = "";
+          hold.current = null; // leaving the tile aborts the kill (WCAG 2.5.2)
+          world.holdProgress = 0;
+          invalidate();
         }}
       >
         <boxGeometry args={[1, 1, 1]} />

@@ -41,6 +41,14 @@ function ensure() {
   recompute();
 }
 
+/** Write the run's seed into the URL so a shared link reproduces it. Called
+    after mount — Next's router rewrites the URL during hydration. */
+function publishSeed() {
+  ensure();
+  if (/seed=/.test(location.hash) || location.hash.startsWith("#project/")) return;
+  history.replaceState(history.state, "", `#seed=${seedHex(seed)}`);
+}
+
 function recompute() {
   if (!run) return;
   snap = snapshot(run, tick, userFaults, shrunk?.to ?? null);
@@ -57,6 +65,7 @@ function setTick(t: number) {
 
 export const sim = {
   init: ensure,
+  publishSeed,
   get seed() { ensure(); return seed; },
   get seedHex() { ensure(); return seedHex(seed); },
   get tick() { return tick; },
@@ -79,7 +88,8 @@ export const sim = {
   /** Map scroll position → tick. The viewport's upper third is the read head. */
   onScroll(y: number, vh: number) {
     if (!sections.length) return;
-    const head = y + vh * 0.35;
+    const h = vh || document.documentElement.clientHeight || 800; // hidden/embedded frames can report 0
+    const head = y + h * 0.35;
     let target: { phase: Phase; top: number; height: number } = sections[0];
     for (const s of sections) if (head >= s.top) target = s;
     const local = Math.max(0, Math.min(1, (head - target.top) / target.height));
@@ -168,4 +178,8 @@ export function useSimSelector<T>(select: (s: Snapshot) => T, isEqual: (a: T, b:
     return cache.current.v;
   }, []);
   return useSyncExternalStore(sim.subscribe, get, get);
+}
+
+if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
+  (window as unknown as { __sim?: unknown }).__sim = sim;
 }

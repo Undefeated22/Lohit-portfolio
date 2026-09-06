@@ -1,6 +1,5 @@
 import dynamic from "next/dynamic";
 import Providers from "@/components/Providers";
-import Boot from "@/components/Boot";
 import Nav from "@/components/Nav";
 import HUD from "@/components/HUD";
 import Palette from "@/components/Palette";
@@ -21,13 +20,9 @@ const Scene = dynamic(() => import("@/components/three/Scene"));
 export default function Home() {
   return (
     <Providers>
-      <Boot />
       <SmoothScroll />
       <Scene />
       <Nav />
-      <HUD />
-      <Palette />
-      <Terminal />
       <main id="main" tabIndex={-1} className="relative z-10 outline-none">
         <Hero />
         <About />
@@ -36,6 +31,9 @@ export default function Home() {
         <Journey />
         <Contact />
       </main>
+      <HUD />
+      <Palette />
+      <Terminal />
     </Providers>
   );
 }

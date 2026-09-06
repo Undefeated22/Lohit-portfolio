@@ -96,6 +96,28 @@ export const diagrams: Record<string, Diagram> = {
       { from: "admin", to: "wa", label: "notify" },
     ],
   },
+  "brokerage-portal": {
+    caption: "balances are sums over an append-only ledger · the schema rejects what the app must never do",
+    nodes: [
+      { id: "client", x: 20, y: 60, w: 130, h: 50, label: "Client", note: "identity · KYC · TOTP step-up" },
+      { id: "routes", x: 210, y: 60, w: 130, h: 50, label: "55 routes", note: "Next.js 16 · Zod-validated" },
+      { id: "dal", x: 400, y: 60, w: 170, h: 50, label: "Data-access layer", note: "one server-side layer for every user-scoped read — authorization cannot be forgotten", hot: true },
+      { id: "ledger", x: 630, y: 60, w: 150, h: 50, label: "Append-only ledger", note: "BigInt minor units · balances derived" },
+      { id: "pg", x: 630, y: 170, w: 150, h: 50, label: "PostgreSQL 17", note: "composite FKs reject a leg in the wrong currency" },
+      { id: "admin", x: 400, y: 170, w: 170, h: 50, label: "Admin withdrawals", note: "four-eyes approval" },
+      { id: "sse", x: 210, y: 170, w: 130, h: 50, label: "SSE quotes", note: "mockable provider seams" },
+      { id: "inv", x: 400, y: 270, w: 170, h: 50, label: "28 invariant checks", note: "each fails if a past defect returns" },
+    ],
+    edges: [
+      { from: "client", to: "routes" },
+      { from: "routes", to: "dal", label: "guards" },
+      { from: "dal", to: "ledger", label: "append" },
+      { from: "ledger", to: "pg" },
+      { from: "admin", to: "ledger", label: "4-eyes" },
+      { from: "sse", to: "client", label: "stream" },
+      { from: "inv", to: "pg", label: "assert" },
+    ],
+  },
   "chess-analyser": {
     caption: "the engine belongs on the client · no server, no queue, no bill",
     nodes: [

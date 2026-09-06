@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 // PORTFOLIO DATA LAYER — Lohit (github.com/Undefeated22)
 // Single source of truth for all user-facing content.
-// Sourced from resume + GitHub, Aug 2026.
+// Sourced from the resume (rebuilt Sep 2026) + GitHub. Claims here must be
+// backed by the resume — never let the two disagree.
 // ─────────────────────────────────────────────────────────────
 
 export const identity = {
@@ -9,7 +10,7 @@ export const identity = {
   legalName: "Lohit",
   role: ["BACKEND", "ENGINEER", "& BUILDER"],
   statement:
-    "I build resilient backend systems —\ndurable execution, AI-driven incident\nresponse, real-time delivery.",
+    "I build systems that survive failure, and prove it —\na durable-execution engine, an LLM incident-investigation\nbackend, a ledger where balances are derived, never mutated.",
   location: "Hisar, Haryana, India — open to relocation",
   availability: "OPEN TO WORK",
   email: "11undefeated22@gmail.com",
@@ -44,7 +45,7 @@ export const about = {
     {
       key: "EXPERIMENT",
       title: "Curiosity as practice",
-      body: "Streaming apps, multi-tenant SaaS, mobile SDK integrations, an OpenCV kiosk. Most experiments die; the lessons compound.",
+      body: "Streaming apps, multi-tenant SaaS, a browser-only chess engine, mobile SDK integrations. Prototypes are how I learn what a system actually needs.",
     },
   ],
 };
@@ -199,6 +200,30 @@ export const projects: Project[] = [
     github: "https://github.com/Undefeated11/Chess_Analyser",
     hue: 45,
   },
+  {
+    slug: "brokerage-portal",
+    index: "06",
+    name: "BROKERAGE PORTAL",
+    tagline: "A trading client portal where money is BigInt and balances are derived, never mutated.",
+    role: "Sole Engineer — contract",
+    year: "2026",
+    tech: ["Next.js", "TypeScript", "PostgreSQL", "Prisma", "Zod", "Server-Sent Events"],
+    overview:
+      "A brokerage client portal built alone under contract: 55 routes over an 80-model Postgres schema spanning identity, KYC, ledger, markets, copy trading and analytics. Client work — described here at the same level as the resume, no more.",
+    problem:
+      "A brokerage cannot afford a balance that drifts, a withdrawal that skips a check, or a quote feed that lies. Every mistake here is money.",
+    thinking:
+      "Treat the database as the last line of defence. Balances are never stored — they are sums over an append-only ledger. Authorization lives in one server-side data-access layer so no route can forget it. Every defect found becomes an invariant check that fails if it ever returns.",
+    architecture:
+      "Money as BigInt minor units on an append-only ledger with derived balances; composite foreign keys so Postgres itself rejects a ledger leg in a currency the account cannot hold. KYC and funding gates as server guards, TOTP step-up auth, four-eyes approval on admin withdrawals.",
+    interfaceNotes:
+      "Live quotes and candles streamed over Server-Sent Events behind mockable provider seams, so the portal runs — and tests — without a live market.",
+    technology:
+      "Next.js 16, TypeScript, PostgreSQL 17, Prisma 7, Zod. 28 invariant checks, each pinned to a past defect.",
+    outcome:
+      "In production for the client. The ledger has never needed a manual balance correction — the schema does not allow one.",
+    hue: 330,
+  },
 ];
 
 export type Experiment = {
@@ -207,28 +232,25 @@ export type Experiment = {
   tech: string;
   status: "LIVE" | "WIP" | "ARCHIVED";
   href?: string;
-  // constellation position, % of container
-  x: number;
-  y: number;
 };
 
 export const experiments: Experiment[] = [
-  { name: "DLX", category: "MULTI-TENANT SAAS", tech: "TypeScript", status: "WIP", href: "https://github.com/Undefeated22/dlx", x: 12, y: 28 },
-  { name: "FORGE FRONTEND", category: "DASHBOARD", tech: "JavaScript", status: "LIVE", href: "https://forge-frontend-xi.vercel.app", x: 34, y: 62 },
-  { name: "OBS", category: "STREAMING", tech: "Web", status: "ARCHIVED", href: "https://github.com/Undefeated22/obs", x: 55, y: 22 },
-  { name: "YOUTUBE BACKEND", category: "API DESIGN", tech: "Node.js", status: "ARCHIVED", href: "https://github.com/Undefeated22/backend", x: 72, y: 55 },
-  { name: "CASECOBRA", category: "E-COMMERCE", tech: "TypeScript", status: "ARCHIVED", href: "https://github.com/Undefeated22/casecobra", x: 88, y: 30 },
-  { name: "FORMBRICKS × RN", category: "MOBILE SDK", tech: "Kotlin", status: "ARCHIVED", href: "https://github.com/Undefeated22/reactnative-formbricks", x: 24, y: 80 },
-  { name: "AMS", category: "DESKTOP APP", tech: "Java · Swing · MySQL", status: "ARCHIVED", href: "https://github.com/Undefeated11/Ams", x: 66, y: 84 },
+  { name: "DLX", category: "MULTI-TENANT SAAS", tech: "TypeScript", status: "WIP", href: "https://github.com/Undefeated22/dlx" },
+  { name: "FORGE FRONTEND", category: "DASHBOARD", tech: "JavaScript", status: "LIVE", href: "https://forge-frontend-xi.vercel.app" },
+  { name: "OBS", category: "STREAMING", tech: "Web", status: "ARCHIVED", href: "https://github.com/Undefeated22/obs" },
+  { name: "YOUTUBE BACKEND", category: "API DESIGN", tech: "Node.js", status: "ARCHIVED", href: "https://github.com/Undefeated22/backend" },
+  { name: "CASECOBRA", category: "E-COMMERCE", tech: "TypeScript", status: "ARCHIVED", href: "https://github.com/Undefeated22/casecobra" },
+  { name: "FORMBRICKS × RN", category: "MOBILE SDK", tech: "Kotlin", status: "ARCHIVED", href: "https://github.com/Undefeated22/reactnative-formbricks" },
+  { name: "AMS", category: "DESKTOP APP", tech: "Java · Swing · MySQL", status: "ARCHIVED", href: "https://github.com/Undefeated11/Ams" },
 ];
 
 export const stack: { group: string; items: string[] }[] = [
-  { group: "BACKEND", items: ["Node.js", "Fastify", "Express.js", "Go", "REST APIs", "Socket.io"] },
-  { group: "LANGUAGES", items: ["JavaScript", "TypeScript", "Go", "Python", "Java", "C/C++"] },
-  { group: "DATA", items: ["PostgreSQL", "pgvector", "MongoDB", "Redis", "SQLite", "ElasticSearch"] },
-  { group: "ASYNC + AI", items: ["BullMQ", "LLM Pipelines", "Groq", "Gemini", "Simulation Testing"] },
-  { group: "INFRA", items: ["Docker", "GitHub Actions", "CI/CD", "AWS", "Railway", "Linux"] },
-  { group: "FRONTEND", items: ["React", "Next.js", "React Native", "Tailwind", "Drizzle ORM"] },
+  { group: "LANGUAGES", items: ["Go", "TypeScript", "JavaScript", "Python", "SQL", "Java", "C/C++"] },
+  { group: "BACKEND", items: ["Node.js", "Fastify", "Express.js", "REST APIs", "Event sourcing", "BullMQ", "Socket.io", "Server-Sent Events", "JWT", "RBAC"] },
+  { group: "DATA", items: ["PostgreSQL", "pgvector", "MongoDB", "Redis", "SQLite", "ElasticSearch", "Prisma", "Drizzle ORM"] },
+  { group: "AI", items: ["Groq", "Gemini", "Embeddings", "Vector search", "Simulation Testing"] },
+  { group: "INFRA", items: ["Docker", "GitHub Actions", "CI/CD", "Linux", "Railway", "Vercel"] },
+  { group: "FRONTEND", items: ["React", "Next.js", "React Native", "Tailwind", "Radix UI"] },
 ];
 
 export type Milestone = {
@@ -241,17 +263,24 @@ export type Milestone = {
 
 export const journey: Milestone[] = [
   {
-    period: "2025 — NOW",
-    role: "Independent Engineering",
-    org: "Forge / dex",
-    note: "Building in public: an AI incident-investigation backend live on Railway, and a Go durable-execution engine verified by deterministic simulation.",
+    period: "2026 — NOW",
+    role: "Freelance Backend Engineer",
+    org: "Brokerage client (contract)",
+    note: "Sole engineer on a trading client portal: 55 routes over an 80-model Postgres schema. Money as BigInt minor units on an append-only ledger with derived balances; composite foreign keys so Postgres rejects a ledger leg in a currency the account cannot hold; TOTP step-up and four-eyes approval on admin withdrawals; live quotes over Server-Sent Events; 28 invariant checks that each fail if a past defect returns.",
     status: "ACTIVE",
+  },
+  {
+    period: "2025 — 2026",
+    role: "Independent Engineering",
+    org: "dex / Forge",
+    note: "A Go durable-execution engine verified by deterministic simulation, and an AI incident-investigation backend live on Railway — both built in public.",
+    status: "LOGGED",
   },
   {
     period: "JUN — SEP 2025",
     role: "Software Development Intern",
     org: "Smartworks, Gurugram",
-    note: "Shipped an internal CRM (self-hosted Twenty), FCM push notifications for a React Native app live on both stores, ElasticSearch-backed search, and an OpenCV face-recognition kiosk.",
+    note: "Took Twenty (open-source CRM) from local evaluation to a self-hosted team product, traced KPI and ticket-assignment defects through MongoDB aggregation pipelines, built ElasticSearch-backed search, and shipped FCM push for a React Native app live on both stores.",
     status: "LOGGED",
   },
 ];

@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { journey, education } from "@/data/portfolio";
 import { Reveal } from "../ui/Reveal";
 import SectionHeader from "../ui/SectionHeader";
 import { sim, useSimSelector } from "@/lib/simStore";
 
-// SHEET 05 — SHRINK. The runtime log, plus the shrink instrument: delta-
-// debug the faults you injected down to the minimal failing set — the
-// same idea dex used to turn 44 faults into 2.
+// SHEET 05 — SHRINK. The sheet performs its phase: when the run reaches
+// SHRINK with faults injected, ddmin runs on its own and the readout shows
+// the minimal failing set. The button re-runs it.
 function Shrinker() {
   const faults = useSimSelector((s) => s.faults);
+  const phase = useSimSelector((s) => s.phase);
   const [result, setResult] = useState<ReturnType<typeof sim.shrink> | null>(null);
-  const run = () => setResult(sim.shrink());
+  useEffect(() => {
+    if (phase === "shrink" && faults > 0 && !sim.shrunk) setResult(sim.shrink());
+  }, [phase, faults]);
   return (
     <div className="rule bg-bg p-5 md:p-6">
       <div className="type-label mb-4 flex items-baseline justify-between">
@@ -21,12 +24,12 @@ function Shrinker() {
       </div>
       <p className="max-w-[60ch] text-sm text-text-2">
         {faults === 0
-          ? "No faults in this run yet. Hold any node on the drawing to kill it (or press K), then shrink."
+          ? "No faults in this run yet. Hold any node on the drawing to kill it (or press K), then this sheet shrinks them."
           : `${faults} fault${faults === 1 ? "" : "s"} injected so far — including the seed's own chaos. Shrink finds the smallest subset that still makes a shard unavailable.`}
       </p>
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button onClick={run} disabled={faults === 0} className="btn btn-stamp disabled:cursor-not-allowed disabled:opacity-40">
-          SHRINK FAULTS
+        <button onClick={() => setResult(sim.shrink())} disabled={faults === 0} className="btn btn-primary disabled:cursor-not-allowed disabled:opacity-40">
+          {result ? "SHRINK AGAIN" : "SHRINK FAULTS"}
         </button>
         <button onClick={() => sim.killAny()} className="btn">KILL A NODE</button>
       </div>
@@ -46,19 +49,26 @@ function Shrinker() {
 }
 
 export default function Journey() {
+  const faults = useSimSelector((s) => s.faults);
+  const shrunk = useSimSelector((s) => s.shrunk);
   return (
     <section id="journey" data-phase="shrink" aria-label="Experience" className="relative px-5 py-28 md:px-8 md:py-36">
       <div className="mx-auto max-w-[1600px]">
-        <SectionHeader sheet="05" phase="SHRINK" title="Runtime log" right="REVERSE CHRONOLOGICAL" />
+        <SectionHeader
+          sheet="05"
+          phase="SHRINK"
+          title="Runtime log"
+          right={shrunk !== null ? `SHRUNK ${faults} → ${shrunk}` : `${faults} FAULTS · NOT YET SHRUNK`}
+        />
         <div className="grid gap-16 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
           <div>
             <ol className="border-t border-line">
               {journey.map((m, i) => (
                 <li key={i} className="grid gap-3 border-b border-line py-8 md:grid-cols-[220px_1fr] md:gap-10">
                   <Reveal>
-                    <span className="type-index block text-[12px] text-accent">{m.period}</span>
+                    <span className="type-index block text-text">{m.period}</span>
                     <span className="type-label mt-1 flex items-center gap-2">
-                      <span className={`size-1.5 ${m.status === "ACTIVE" ? "bg-accent pulse-dot" : "bg-label"}`} aria-hidden />
+                      <span className={`size-1.5 ${m.status === "ACTIVE" ? "bg-text" : "bg-label"}`} aria-hidden />
                       {m.status}
                     </span>
                   </Reveal>
@@ -71,7 +81,7 @@ export default function Journey() {
               ))}
               <li className="grid gap-3 py-8 md:grid-cols-[220px_1fr] md:gap-10">
                 <Reveal>
-                  <span className="type-index block text-[12px] text-accent">{education.period}</span>
+                  <span className="type-index block text-text">{education.period}</span>
                   <span className="type-label mt-1 block">EDUCATION</span>
                 </Reveal>
                 <Reveal delay={0.05}>

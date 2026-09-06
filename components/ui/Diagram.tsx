@@ -20,7 +20,9 @@ function edgePath(a: DNode, b: DNode) {
 }
 
 export default function Diagram({ data, title }: { data: DiagramT; title: string }) {
-  const [active, setActive] = useState<string | null>(null);
+  const [hover, setHover] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<string | null>(null);
+  const active = hover ?? pinned;
   const byId = Object.fromEntries(data.nodes.map((n) => [n.id, n]));
   const note = active ? byId[active]?.note : null;
 
@@ -28,19 +30,20 @@ export default function Diagram({ data, title }: { data: DiagramT; title: string
     <figure className="rule bg-bg-deep/40 p-3 md:p-5">
       <style>{`
         @keyframes dg-flow { to { stroke-dashoffset: -28; } }
-        .dg-edge { stroke: color-mix(in srgb, var(--color-text) 35%, transparent); fill: none; stroke-width: 1.2; stroke-dasharray: 6 8; animation: dg-flow 1.4s linear infinite; }
-        .dg-edge.on { stroke: var(--color-accent); stroke-width: 1.8; }
+        .dg-edge { stroke: color-mix(in srgb, var(--color-text) 55%, transparent); fill: none; stroke-width: 1.2; stroke-dasharray: 6 8; }
+        .dg-edge.on { stroke: var(--color-text); stroke-width: 1.8; animation: dg-flow 1.4s linear infinite; }
         .dg-node rect { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 1; }
-        .dg-node.hot rect { stroke: var(--color-accent); }
-        .dg-node.on rect { fill: var(--color-accent); }
+        .dg-node.hot rect { stroke-width: 2.5; }
+        .dg-node.on rect { fill: var(--color-text); }
         .dg-node.on text { fill: var(--color-bg); }
         .dg-node text { fill: var(--color-text); font-family: var(--font-mono); font-size: 12px; }
         .dg-label { fill: var(--color-label); font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; }
         @media (prefers-reduced-motion: reduce) { .dg-edge { animation: none; } }
       `}</style>
+      <div className="overflow-x-auto">
       <svg
         viewBox="0 0 800 360"
-        className="h-auto w-full"
+        className="h-auto w-full min-w-[560px]"
         role="group"
         aria-label={`${title} architecture diagram`}
       >
@@ -67,10 +70,13 @@ export default function Diagram({ data, title }: { data: DiagramT; title: string
             tabIndex={0}
             role="button"
             aria-label={`${n.label}${n.note ? ` — ${n.note}` : ""}`}
-            onMouseEnter={() => setActive(n.id)}
-            onMouseLeave={() => setActive(null)}
-            onFocus={() => setActive(n.id)}
-            onBlur={() => setActive(null)}
+            aria-pressed={pinned === n.id}
+            onMouseEnter={() => setHover(n.id)}
+            onMouseLeave={() => setHover(null)}
+            onFocus={() => setHover(n.id)}
+            onBlur={() => setHover(null)}
+            onClick={() => setPinned((p) => (p === n.id ? null : n.id))}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPinned((p) => (p === n.id ? null : n.id)); } }}
             style={{ cursor: n.note ? "help" : "default", outline: "none" }}
           >
             <rect x={n.x} y={n.y} width={n.w} height={n.h} />
@@ -78,9 +84,10 @@ export default function Diagram({ data, title }: { data: DiagramT; title: string
           </g>
         ))}
       </svg>
+      </div>
       <figcaption className="mt-3 flex min-h-[1.5rem] items-baseline justify-between gap-4">
         <span className="type-label">{data.caption}</span>
-        <span className="type-note text-right" aria-live="polite">{note ?? ""}</span>
+        <span className="type-note text-right">{note ?? ""}</span>
       </figcaption>
     </figure>
   );

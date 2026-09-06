@@ -296,6 +296,38 @@ export function snapshot(run: Run, tick: number, userFaults: Fault[], shrunk: nu
     };
   });
 
+  // narration for the quiet phases — pure functions of tick, so scrolling
+  // back rewinds the log too
+  const synth: Snapshot["events"] = [];
+  const bootN = Math.min(N, Math.floor(bootT * N) + 1);
+  for (let k = Math.max(0, bootN - 3); k < bootN; k++) {
+    synth.push({ tick: Math.round((k / N) * PHASE_TICKS.boot), text: `node ${run.bootOrder[k]} powered on`, kind: "info" });
+  }
+  const leaseStart = phaseStart("lease");
+  if (tick >= leaseStart) {
+    const n = Math.min(N, Math.floor(((tick - leaseStart) / PHASE_TICKS.lease) * N) + 1);
+    for (let k = Math.max(0, n - 3); k < n; k++) {
+      const i = run.bootOrder[k];
+      synth.push({ tick: leaseStart + Math.round((k / N) * PHASE_TICKS.lease), text: `lease ${i} acquired by node ${i}  (token 1)`, kind: "info" });
+    }
+  }
+  run.workflows.forEach((w, k) => {
+    const t = tick - wfStart - w.startAt;
+    if (t < 0) return;
+    const idx = Math.min(w.path.length - 1, Math.floor(t / 24));
+    for (let s = Math.max(0, idx - 1); s <= idx; s++) {
+      synth.push({ tick: wfStart + w.startAt + s * 24, text: `workflow 0${k + 1} → node ${w.path[s]}${s === w.path.length - 1 ? "  (completed)" : ""}`, kind: "info" });
+    }
+  });
+  if (phase === "exit") {
+    const n = Math.min(N, Math.floor(local * N) + 1);
+    for (let k = Math.max(0, n - 3); k < n; k++) {
+      const i = run.bootOrder[N - 1 - k];
+      if (i !== run.bootOrder[0]) synth.push({ tick: phaseStart("exit") + Math.round((k / N) * PHASE_TICKS.exit), text: `node ${i} drained`, kind: "info" });
+    }
+  }
+  const events = [...sim.events, ...synth].filter((e) => e.tick <= tick).sort((a, b) => a.tick - b.tick).slice(-6);
+
   return {
     tick,
     phase,
@@ -306,7 +338,7 @@ export function snapshot(run: Run, tick: number, userFaults: Fault[], shrunk: nu
     holder: sim.holder,
     activity,
     heads,
-    events: sim.events.filter((e) => e.tick <= tick).slice(-6),
+    events,
     faults: all.filter((f) => f.at <= tick).length,
     shrunk,
   };

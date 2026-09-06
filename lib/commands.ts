@@ -3,6 +3,7 @@
 import { identity, projects, socials } from "@/data/portfolio";
 import { scrollToSection } from "@/components/SmoothScroll";
 import { sim } from "./simStore";
+import { shortcutsEnabled, setShortcutsEnabled } from "./shortcuts";
 
 // One registry, three surfaces: ⌘K palette, terminal, keyboard shortcuts.
 export type Command = {
@@ -83,7 +84,7 @@ export const commands: Command[] = [
   },
   {
     id: "sim:seed",
-    label: `copy this run's seed (${typeof window !== "undefined" ? "" : ""}#seed)`,
+    label: "copy this run's seed URL",
     group: "Simulator",
     keywords: ["share", "reproduce", "url"],
     run: () => {
@@ -93,6 +94,17 @@ export const commands: Command[] = [
     },
   },
 
+  {
+    id: "act:shortcuts",
+    label: "Toggle single-key shortcuts (K / S / /)",
+    group: "Actions",
+    keywords: ["keyboard", "accessibility", "disable"],
+    run: () => {
+      const next = !shortcutsEnabled();
+      setShortcutsEnabled(next);
+      return `single-key shortcuts ${next ? "on" : "off"} — ⌘K always works`;
+    },
+  },
   {
     id: "act:terminal",
     label: "Open terminal",

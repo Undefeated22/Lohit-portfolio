@@ -13,14 +13,14 @@ import { EASE, useReducedMotionSafe } from "@/lib/motion";
 
 // SHEET 03 — WORKFLOWS. Five workflows crawl the cluster; five sheets in
 // the drawing index. A case study opens as that workflow's event history.
-const MOVEMENTS: [string, string, keyof Project][] = [
-  ["WorkflowExecutionStarted", "OVERVIEW", "overview"],
-  ["WorkflowTaskScheduled", "PROBLEM", "problem"],
-  ["WorkflowTaskStarted", "THINKING", "thinking"],
-  ["ActivityTaskScheduled", "ARCHITECTURE", "architecture"],
-  ["ActivityTaskStarted", "INTERFACE", "interfaceNotes"],
-  ["ActivityTaskCompleted", "TECHNOLOGY", "technology"],
-  ["WorkflowExecutionCompleted", "OUTCOME", "outcome"],
+const MOVEMENTS: [string, keyof Project][] = [
+  ["OVERVIEW", "overview"],
+  ["PROBLEM", "problem"],
+  ["THINKING", "thinking"],
+  ["ARCHITECTURE", "architecture"],
+  ["INTERFACE", "interfaceNotes"],
+  ["TECHNOLOGY", "technology"],
+  ["OUTCOME", "outcome"],
 ];
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -40,15 +40,13 @@ function Sheet({ p, onOpen }: { p: Project; onOpen: () => void }) {
           </div>
           <div>
             <span className="type-label">SHEET 03.{p.index} · {p.year} · {p.role}</span>
-            <h3 className="type-h2 mt-2 text-[clamp(1.8rem,4vw,3.4rem)] transition-colors duration-300 group-hover:text-accent">{p.name}</h3>
+            <h3 className="type-h2 mt-2 text-[clamp(1.8rem,4vw,3.4rem)]">{p.name}</h3>
             <p className="mt-3 max-w-[60ch] text-text-2">{p.tagline}</p>
             <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1" aria-label="Technologies">
               {p.tech.map((t) => <li key={t} className="type-label">{t}</li>)}
             </ul>
           </div>
-          <div className="type-label flex items-end gap-2 self-end text-text">
-            OPEN <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
-          </div>
+          <div className="type-label flex items-end gap-2 self-end text-text">OPEN →</div>
         </div>
       </article>
     </Reveal>
@@ -71,7 +69,7 @@ function CaseStudy({ p, onClose, onSwitch }: { p: Project; onClose: () => void; 
     world.project = p.slug;
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") return onClose();
+      if (e.key === "Escape") { if (document.querySelector("dialog[open]")) return; return onClose(); }
       if (e.key !== "Tab" || !dialogRef.current) return;
       const nodes = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
       if (!nodes.length) return;
@@ -109,7 +107,7 @@ function CaseStudy({ p, onClose, onSwitch }: { p: Project; onClose: () => void; 
       data-ui
       data-lenis-prevent
       onScroll={(e) => { const el = e.currentTarget; const max = el.scrollHeight - el.clientHeight; readRaw.set(max > 0 ? el.scrollTop / max : 0); }}
-      className="grid-bg fixed inset-0 z-[70] overflow-y-auto bg-bg/92 backdrop-blur-sm"
+      className="fixed inset-0 z-[70] overflow-y-auto bg-[linear-gradient(to_bottom,rgba(11,31,79,0.55),rgba(11,31,79,0.96)_40vh)]"
       role="dialog"
       aria-modal="true"
       aria-label={`${p.name} case study`}
@@ -136,17 +134,16 @@ function CaseStudy({ p, onClose, onSwitch }: { p: Project; onClose: () => void; 
 
         {diagram && (
           <div className="mt-12">
-            <div className="type-label mb-3 flex items-baseline justify-between"><span className="text-text">ARCHITECTURE</span><span>hover a node</span></div>
+            <div className="type-label mb-3 flex items-baseline justify-between"><span className="text-text">ARCHITECTURE</span><span>hover or focus a node · click to pin</span></div>
             <Diagram data={diagram} title={p.name} />
           </div>
         )}
 
         <ol className="mt-14 border-t border-line">
-          {MOVEMENTS.map(([event, label, key], k) => (
+          {MOVEMENTS.map(([label, key], k) => (
             <li key={label} className="grid gap-3 border-b border-line py-8 md:grid-cols-[260px_1fr] md:gap-10">
               <div>
-                <span className="type-index block text-[12px] text-accent">seq {String(k + 1).padStart(3, "0")}</span>
-                <span className="mt-1 block font-mono text-[12px] text-text">{event}</span>
+                <span className="type-index block text-text">seq {String(k + 1).padStart(3, "0")}</span>
                 <span className="type-label mt-1 block">{label}</span>
               </div>
               <p className={`max-w-[64ch] ${k === 0 ? "text-lg leading-relaxed text-text" : "text-text-2"}`}>{String(p[key])}</p>
@@ -155,12 +152,11 @@ function CaseStudy({ p, onClose, onSwitch }: { p: Project; onClose: () => void; 
           {(p.live || p.github) && (
             <li className="grid gap-3 py-8 md:grid-cols-[260px_1fr] md:gap-10">
               <div>
-                <span className="type-index block text-[12px] text-accent">seq {String(MOVEMENTS.length + 1).padStart(3, "0")}</span>
-                <span className="mt-1 block font-mono text-[12px] text-text">SignalReceived</span>
+                <span className="type-index block text-text">seq {String(MOVEMENTS.length + 1).padStart(3, "0")}</span>
                 <span className="type-label mt-1 block">LINKS</span>
               </div>
               <div className="flex flex-wrap gap-3">
-                {p.live && <a href={p.live} target="_blank" rel="noreferrer" className="btn btn-stamp">LIVE ↗</a>}
+                {p.live && <a href={p.live} target="_blank" rel="noreferrer" className="btn btn-primary">LIVE ↗</a>}
                 {p.github && <a href={p.github} target="_blank" rel="noreferrer" className="btn">GITHUB ↗</a>}
               </div>
             </li>
@@ -170,9 +166,9 @@ function CaseStudy({ p, onClose, onSwitch }: { p: Project; onClose: () => void; 
         <button onClick={() => onSwitch(next)} className="group mt-16 flex w-full items-end justify-between gap-6 border-t border-text pt-8 text-left" aria-label={`Next case study: ${next.name}`}>
           <div>
             <span className="type-label">NEXT WORKFLOW</span>
-            <span className="type-h2 mt-2 block text-[clamp(1.6rem,4vw,3rem)] transition-colors group-hover:text-accent">{next.name}</span>
+            <span className="type-h2 mt-2 block text-[clamp(1.6rem,4vw,3rem)] transition-colors group-hover:text-text-2">{next.name}</span>
           </div>
-          <span className="type-index text-[13px] text-accent transition-transform group-hover:translate-x-1.5">{next.index} →</span>
+          <span className="type-index text-text">{next.index} →</span>
         </button>
       </div>
     </motion.div>
@@ -216,8 +212,8 @@ export default function Work() {
           sheet="03"
           phase="WORKFLOWS"
           title="Drawing index"
-          sub="Five workflows are crawling the cluster behind this sheet — each colour is a project. Open one and the camera drops onto its path."
-          right={`${projects.length} WORKFLOWS · EVENT-SOURCED`}
+          sub="Six workflows are crawling the cluster behind this sheet — each colour is a project. Open one and the camera drops onto its path."
+          right={`${projects.length} WORKFLOWS · ${projects.filter((p) => p.live).length} LIVE`}
         />
         <div className="border-t border-line">
           {projects.map((p) => <Sheet key={p.slug} p={p} onOpen={() => open(p)} />)}
