@@ -1,12 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { AdaptiveDpr, PerformanceMonitor } from "@react-three/drei";
 import { EffectComposer, Bloom, Noise, Vignette, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import Cluster from "./Cluster";
 import { useReducedMotionSafe } from "@/lib/motion";
+import { sim } from "@/lib/simStore";
+
+// demand mode: redraw whenever the simulator changes (scroll, kill, reseed)
+function InvalidateOnSim() {
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => sim.subscribe(() => invalidate()), [invalidate]);
+  return null;
+}
 
 // One persistent drawing behind the whole page. DOM owns every word;
 // WebGL owns only the cluster. Post chain is tiered by measured performance.
@@ -31,7 +39,7 @@ export default function Scene() {
         onCreated={({ gl }) => gl.setClearColor("#0b1f4f", 1)}
       >
         <color attach="background" args={["#0b1f4f"]} />
-        <fog attach="fog" args={["#0b1f4f", 9, 24]} />
+        <fog attach="fog" args={["#0b1f4f", 12, 34]} />
         <AdaptiveDpr pixelated />
         <PerformanceMonitor
           factor={1}
@@ -42,6 +50,7 @@ export default function Scene() {
           onFallback={() => { setTier(0); setDpr(1); }}
         />
         <Cluster />
+        {reduced && <InvalidateOnSim />}
         {!reduced && tier > 0 && (
           <EffectComposer multisampling={0} resolutionScale={tier === 2 ? 1 : 0.75}>
             <SMAA />

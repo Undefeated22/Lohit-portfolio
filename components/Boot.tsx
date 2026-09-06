@@ -13,7 +13,7 @@ export default function Boot() {
   const reduced = useReducedMotionSafe();
 
   useEffect(() => {
-    if (sessionStorage.getItem("booted")) return;
+    if (sessionStorage.getItem("booted") || document.hidden) return;
     sessionStorage.setItem("booted", "1");
     setSeed(sim.seedHex);
     setShow(true);

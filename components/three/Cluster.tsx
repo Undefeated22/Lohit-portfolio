@@ -15,7 +15,9 @@ const SURFACE = new THREE.Color("#102a63");
 const SURFACE_DEAD = new THREE.Color("#061238");
 const CAUTION = new THREE.Color("#ffd23f");
 
-const tilePos = (i: number) => new THREE.Vector3((i % GRID) - (GRID - 1) / 2, 0, Math.floor(i / GRID) - (GRID - 1) / 2);
+// precomputed once — useFrame must not allocate
+const TILE = Array.from({ length: N }, (_, i) => ({ x: (i % GRID) - (GRID - 1) / 2, z: Math.floor(i / GRID) - (GRID - 1) / 2 }));
+const tilePos = (i: number) => TILE[i];
 const HOLD_MS = 650;
 
 // drafting grid + dithered under-glow on the ground plane
@@ -137,7 +139,8 @@ export default function Cluster() {
     };
   }, []);
 
-  useFrame((_, rawDelta) => {
+  const firstFrame = useRef(true);
+  useFrame((_state, rawDelta) => {
     const delta = Math.min(rawDelta, 1 / 30);
     const s = sim.snapshot;
     const run = sim.run;
@@ -256,6 +259,16 @@ export default function Cluster() {
     const distKeys = [12.5, 11, 9.5, 11, 10.5, 13, 13];
     const yaw = THREE.MathUtils.degToRad(45 + THREE.MathUtils.lerp(yawKeys[pi], yawKeys[pi + 1], local));
     let dist = THREE.MathUtils.lerp(distKeys[pi], distKeys[pi + 1], local);
+    // narrow (portrait) viewports need the camera further back to keep the
+    // whole cluster in frame under the fixed 32° vertical fov
+    const aspect = size.width / size.height;
+    const portrait = aspect < 1.1;
+    if (portrait) dist *= Math.min(1.7, 1.1 / aspect);
+    const fov = portrait ? 44 : 32;
+    if ((camera as THREE.PerspectiveCamera).fov !== fov) {
+      (camera as THREE.PerspectiveCamera).fov = fov;
+      camera.updateProjectionMatrix();
+    }
     let pitch = THREE.MathUtils.degToRad(35);
     lookAt.set(0, 0, 0);
     // on wide screens the hero type owns the left; push the cluster right
@@ -264,8 +277,9 @@ export default function Cluster() {
       const k = projects.findIndex((p) => p.slug === world.project);
       const w = run.workflows[k];
       if (w) {
-        const c = w.path.reduce((acc, ti) => acc.add(tilePos(ti)), new THREE.Vector3()).divideScalar(w.path.length);
-        lookAt.copy(c);
+        let cx = 0, cz = 0;
+        for (const ti of w.path) { cx += TILE[ti].x; cz += TILE[ti].z; }
+        lookAt.set(cx / w.path.length, 0, cz / w.path.length);
       }
       pitch = THREE.MathUtils.degToRad(82);
       dist = 6.5;
@@ -275,7 +289,10 @@ export default function Cluster() {
       lookAt.y + dist * Math.sin(pitch),
       lookAt.z + dist * Math.cos(pitch) * Math.cos(yaw)
     );
-    const k = 1 - Math.exp(-3.2 * delta);
+    // first frame and on-demand (reduced motion) frames snap; otherwise damp
+    const snap = firstFrame.current || _state.frameloop === "demand";
+    firstFrame.current = false;
+    const k = snap ? 1 : 1 - Math.exp(-3.2 * delta);
     camera.position.lerp(camTarget, k);
     camera.lookAt(lookAt);
   });
