@@ -10,7 +10,7 @@ export const identity = {
   legalName: "Lohit",
   role: ["BACKEND", "ENGINEER", "& BUILDER"],
   statement:
-    "I build systems that survive failure, and prove it —\na durable-execution engine, an LLM incident-investigation\nbackend, a ledger where balances are derived, never mutated.",
+    "I build systems that survive failure, and prove it: a durable-execution engine, an LLM incident-investigation backend, a ledger where balances are derived and never mutated.",
   location: "Hisar, Haryana, India — open to relocation",
   availability: "OPEN TO WORK",
   email: "11undefeated22@gmail.com",

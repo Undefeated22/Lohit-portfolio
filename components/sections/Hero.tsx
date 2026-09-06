@@ -57,7 +57,7 @@ export default function Hero() {
         </h1>
 
         <div className="mt-10 grid gap-8 md:grid-cols-[minmax(0,52ch)_1fr] md:items-end">
-          <motion.p {...rise(0.6)} className="whitespace-pre-line text-[15px] leading-relaxed text-text-2 md:text-base">
+          <motion.p {...rise(0.6)} className="max-w-[52ch] text-[15px] leading-relaxed text-text-2 md:text-base">
             {identity.statement}
           </motion.p>
           <motion.div {...rise(0.75)} className="flex flex-wrap items-center gap-3 md:justify-end">
