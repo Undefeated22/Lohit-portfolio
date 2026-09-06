@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Component, type ReactNode } from "react";
+import { Component, useMemo, type ReactNode } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { NoToneMapping } from "three";
+import { BlueprintEffect } from "./BlueprintEffect";
 import { PerformanceMonitor } from "@react-three/drei";
 import { EffectComposer, Bloom, Noise, SMAA } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
@@ -33,6 +34,7 @@ export default function Scene() {
   const [dpr, setDpr] = useState(1.5);
   const [eventSource, setEventSource] = useState<HTMLElement>();
   const [monitor, setMonitor] = useState(false);
+  const blueprint = useMemo(() => new BlueprintEffect({ edge: 1, dither: 0.55, misreg: 1 }), []);
   useEffect(() => {
     setEventSource(document.body);
     const t = setTimeout(() => setMonitor(true), 2500); // let the first frames settle
@@ -67,12 +69,13 @@ export default function Scene() {
         )}
         <Cluster />
         {reduced && <InvalidateOnSim />}
-        {!reduced && tier > 0 && (
+        {tier > 0 && (
           <EffectComposer multisampling={0}>
-            {/* tier 1 drops the three full-res SMAA passes; bloom + noise stay */}
+            {/* tier 1 drops the three full-res SMAA passes; the print stays */}
             {tier === 2 ? <SMAA /> : <></>}
-            <Bloom mipmapBlur intensity={0.75} luminanceThreshold={1} luminanceSmoothing={0.2} />
-            <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.14} />
+            <Bloom mipmapBlur intensity={0.7} luminanceThreshold={1} luminanceSmoothing={0.2} />
+            <primitive object={blueprint} />
+            {reduced ? <></> : <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.1} />}
           </EffectComposer>
         )}
       </Canvas>

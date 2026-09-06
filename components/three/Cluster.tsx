@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Html } from "@react-three/drei";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { sim } from "@/lib/simStore";
@@ -19,6 +20,7 @@ const CAUTION = new THREE.Color("#ffd23f");
 const TILE = Array.from({ length: N }, (_, i) => ({ x: (i % GRID) - (GRID - 1) / 2, z: Math.floor(i / GRID) - (GRID - 1) / 2 }));
 const tilePos = (i: number) => TILE[i];
 const HOLD_MS = 650;
+const TRAIL_SEGS = 14;
 const WF_START = phaseStart("workflows");
 
 // drafting grid + dithered under-glow on the ground plane
@@ -30,7 +32,9 @@ void main(){
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 const groundFrag = /* glsl */ `
-uniform vec3 uBg; uniform vec3 uLine; uniform vec3 uChalk; uniform float uGlow;
+uniform vec3 uBg; uniform vec3 uLine; uniform vec3 uChalk; uniform vec3 uCaution; uniform float uGlow;
+uniform float uTick;
+uniform vec4 uKills[4]; // x, z, tick of death, active
 varying vec2 vXZ;
 float bayer4(vec2 p){
   // 4x4 ordered-dither matrix indexed by screen pixel, never by UV —
@@ -41,10 +45,25 @@ float bayer4(vec2 p){
   return (float(m[idx]) + 0.5) / 16.0;
 }
 void main(){
-  vec2 g = abs(fract(vXZ + 0.5) - 0.5);
+  // shockwaves: each kill sends a ring out through the drafting grid, bending
+  // the lines as it passes and leaving a dithered caution halo that fades
+  vec2 xz = vXZ;
+  float halo = 0.0;
+  for (int k = 0; k < 4; k++) {
+    if (uKills[k].w < 0.5) continue;
+    float age = uTick - uKills[k].z;
+    if (age < 0.0) continue;
+    vec2 dv = vXZ - uKills[k].xy;
+    float r = length(dv);
+    float front = age * 0.11;
+    float env = exp(-abs(r - front) * 2.2) * (1.0 - smoothstep(0.0, 110.0, age));
+    xz += normalize(dv + 1e-4) * sin((r - front) * 9.0) * 0.06 * env;
+    halo = max(halo, env * (1.0 - smoothstep(0.0, 2.6, r)) * 0.9);
+  }
+  vec2 g = abs(fract(xz + 0.5) - 0.5);
   float d = min(g.x, g.y);
   float major = 1.0 - smoothstep(0.0, 0.012, d);
-  vec2 g2 = abs(fract(vXZ * 4.0 + 0.5) - 0.5);
+  vec2 g2 = abs(fract(xz * 4.0 + 0.5) - 0.5);
   float minor = (1.0 - smoothstep(0.0, 0.04, min(g2.x, g2.y))) * 0.35;
   float r = length(vXZ);
   float fade = 1.0 - smoothstep(4.0, 14.0, r);
@@ -54,6 +73,8 @@ void main(){
   vec3 col = uBg;
   col = mix(col, uLine, (major * 0.9 + minor) * fade);
   col = mix(col, uChalk, dith * 0.18);
+  float hdith = step(bayer4(gl_FragCoord.xy + 2.0), halo);
+  col = mix(col, uCaution, hdith * 0.55);
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -64,6 +85,9 @@ export default function Cluster() {
   const flags = useRef<THREE.InstancedMesh>(null!);
   const workers = useRef<THREE.InstancedMesh>(null!);
   const heads = useRef<THREE.InstancedMesh>(null!);
+  const trails = useRef<THREE.InstancedMesh>(null!);
+  const [captions, setCaptions] = useState<{ key: string; tile: number; text: string; kind: string }[]>([]);
+  const lastCaptionKey = useRef("");
   const groundMat = useRef<THREE.ShaderMaterial>(null!);
   const hold = useRef<{ tile: number; since: number } | null>(null);
   const tmp = useMemo(() => new THREE.Object3D(), []);
@@ -151,6 +175,28 @@ export default function Cluster() {
     const s = sim.snapshot;
     const run = sim.run;
     const tick = sim.tick;
+
+    // drafting captions on the nodes the log is talking about (rare React update)
+    const capKey = s.events.map((e) => e.tick + e.text).join("|");
+    if (capKey !== lastCaptionKey.current) {
+      lastCaptionKey.current = capKey;
+      const next: typeof captions = [];
+      for (const e of s.events.slice(-5)) {
+        if (tick - e.tick > 140) continue;
+        const m = /(?:node|lease|shard) (\d+)/.exec(e.text);
+        if (!m) continue;
+        const tile = Number(m[1]);
+        let text = "";
+        if (/killed/.test(e.text)) text = "SIGKILL";
+        else if (/^lease/.test(e.text)) text = e.text.replace(/^lease \d+ → /, "LEASE → n").replace(/\s+\(token (\d+)\)/, " · t$1").toUpperCase();
+        else if (e.kind === "fence") text = e.text.replace(/.*token (\d+) < (\d+)/, "FENCED · t$1 < t$2");
+        else if (/no live neighbour/.test(e.text)) text = "NO LIVE NEIGHBOUR";
+        else if (/recovered/.test(e.text)) text = "RECOVERED";
+        else continue;
+        next.push({ key: e.tick + e.text, tile, text, kind: e.kind });
+      }
+      setCaptions(next);
+    }
 
     // hold-to-kill progress (in demand mode keep asking for frames while held)
     if (hold.current) {
@@ -257,6 +303,46 @@ export default function Cluster() {
     let avg = 0;
     for (let i = 0; i < N; i++) avg += s.power[i];
     groundMat.current.uniforms.uGlow.value = avg / N;
+    groundMat.current.uniforms.uTick.value = tick;
+    // the last four kills ripple through the drawing (rewinds with the tick)
+    const kills = s.events.filter((e) => e.kind === "warn" && / killed/.test(e.text)).slice(-4);
+    const kv = groundMat.current.uniforms.uKills.value as THREE.Vector4[];
+    for (let k = 0; k < 4; k++) {
+      const e = kills[k];
+      const t = e ? Number(/node (\d+)/.exec(e.text)?.[1]) : NaN;
+      if (e && Number.isFinite(t)) kv[k].set(TILE[t].x, TILE[t].z, e.tick, 1);
+      else kv[k].set(0, 0, 0, 0);
+    }
+
+    // ── trails: each workflow leaves its path behind it, fading by distance ──
+    run.workflows.forEach((w, k) => {
+      const t = tick - WF_START - w.startAt;
+      const idx = t < 0 ? -1 : Math.min(w.path.length - 1, Math.floor(t / 24));
+      for (let j = 0; j < TRAIL_SEGS; j++) {
+        const slot = k * TRAIL_SEGS + j;
+        const visible = idx > j && j + 1 < w.path.length;
+        if (!visible) {
+          tmp.scale.setScalar(0.0001);
+          tmp.position.set(0, -1, 0);
+          tmp.updateMatrix();
+          trails.current.setMatrixAt(slot, tmp.matrix);
+          trails.current.setColorAt(slot, col.set(0, 0, 0)); // keeps instanceColor allocated
+          continue;
+        }
+        const a = TILE[w.path[j]], b = TILE[w.path[j + 1]];
+        const dx = b.x - a.x, dz = b.z - a.z;
+        tmp.position.set((a.x + b.x) / 2, 0.2, (a.z + b.z) / 2);
+        tmp.rotation.set(0, Math.atan2(dx, dz), 0);
+        tmp.scale.set(0.05, 0.02, Math.hypot(dx, dz));
+        tmp.updateMatrix();
+        trails.current.setMatrixAt(slot, tmp.matrix);
+        const fade = Math.max(0.15, 1 - (idx - j) / 6);
+        col.copy(hueColors[k]).multiplyScalar(0.4 + 1.4 * fade);
+        trails.current.setColorAt(slot, col);
+      }
+    });
+    trails.current.instanceMatrix.needsUpdate = true;
+    trails.current.instanceColor!.needsUpdate = true;
 
     // ── camera: pure function of (phase, local, open project), then damped ──
     const { phase, local } = phaseAt(tick);
@@ -331,7 +417,10 @@ export default function Cluster() {
             uBg: { value: new THREE.Color("#0b1f4f") },
             uLine: { value: new THREE.Color("#2a4a93") },
             uChalk: { value: CHALK },
+            uCaution: { value: CAUTION },
             uGlow: { value: 0 },
+            uTick: { value: 0 },
+            uKills: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] },
           }}
         />
       </mesh>
@@ -382,6 +471,31 @@ export default function Cluster() {
         <octahedronGeometry args={[1, 0]} />
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
+
+      <instancedMesh ref={trails} args={[undefined, undefined, projects.length * TRAIL_SEGS]} frustumCulled={false}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshBasicMaterial toneMapped={false} />
+      </instancedMesh>
+
+      {captions.map((c) => (
+        <Html
+          key={c.key}
+          position={[TILE[c.tile].x, 0.62, TILE[c.tile].z]}
+          center
+          zIndexRange={[5, 0]}
+          style={{ pointerEvents: "none", whiteSpace: "nowrap" }}
+        >
+          <span
+            className={`type-label border px-1.5 py-0.5 ${
+              c.kind === "fence" || c.text === "SIGKILL" || c.text === "NO LIVE NEIGHBOUR"
+                ? "border-accent bg-bg/80 text-accent"
+                : "border-text/60 bg-bg/80 text-text"
+            }`}
+          >
+            n{c.tile} · {c.text}
+          </span>
+        </Html>
+      ))}
     </group>
   );
 }
