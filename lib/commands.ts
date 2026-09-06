@@ -16,7 +16,7 @@ export type Command = {
 };
 
 export function openProject(slug: string) {
-  history.pushState({ fromSite: true }, "", `#project/${slug}`);
+  if (location.hash !== `#project/${slug}`) history.pushState({ fromSite: true }, "", `#project/${slug}`);
   dispatchEvent(new PopStateEvent("popstate"));
 }
 
@@ -90,7 +90,7 @@ export const commands: Command[] = [
     run: () => {
       const url = `${location.origin}${location.pathname}#seed=${sim.seedHex}`;
       navigator.clipboard?.writeText(url).catch(() => {});
-      return `copied ${url}`;
+      return `seed URL: ${url}`;
     },
   },
 
@@ -120,7 +120,7 @@ export const commands: Command[] = [
     keywords: ["mail", "contact"],
     run: () => {
       navigator.clipboard?.writeText(identity.email).catch(() => {});
-      return `copied ${identity.email}`;
+      return identity.email;
     },
   },
   {

@@ -140,6 +140,7 @@ export default function Nav() {
             role="dialog"
             aria-modal="true"
             aria-label="Menu"
+            data-lenis-prevent
             className="grid-bg fixed inset-0 z-50 flex flex-col justify-between gap-6 overflow-y-auto bg-bg px-6 pb-10 pt-4 md:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

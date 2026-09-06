@@ -163,6 +163,10 @@ export function useSim() {
   return sim.snapshot;
 }
 
+/** false during SSR and hydration, true after mount — gate anything whose
+    server value depends on the seed (event text, chaos ticks, node numbers). */
+export const useHydrated = () => useSyncExternalStore(() => () => {}, () => true, () => false);
+
 /** Cheap subscription for surfaces that only care about rare changes.
     The cache lives in a ref so getSnapshot returns a stable value between
     store changes (React requires this; a per-render closure loops). */

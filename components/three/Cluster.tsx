@@ -94,13 +94,13 @@ export default function Cluster() {
   }, []);
   useEffect(() => () => wire.dispose(), [wire]);
 
-  // workers: up to 3 per tile, fixed slots
+  // workers: 3 fixed slots per tile; a slot the current run does not use is
+  // scaled to zero, so a reseed never leaves stale cubes behind
   const workerSlots = useMemo(() => {
-    const run = sim.run;
-    const out: { tile: number; dx: number; dz: number; phase: number }[] = [];
+    const out: { tile: number; w: number; dx: number; dz: number; phase: number }[] = [];
     for (let i = 0; i < N; i++) {
-      for (let w = 0; w < run.workers[i]; w++) {
-        out.push({ tile: i, dx: -0.22 + w * 0.22, dz: 0.18 - w * 0.12, phase: (i * 7 + w * 13) % 17 });
+      for (let w = 0; w < 3; w++) {
+        out.push({ tile: i, w, dx: -0.22 + w * 0.22, dz: 0.18 - w * 0.12, phase: (i * 7 + w * 13) % 17 });
       }
     }
     return out;
@@ -127,8 +127,8 @@ export default function Cluster() {
   const onDown = (e: ThreeEvent<PointerEvent>) => {
     if (overUI(e) || e.instanceId === undefined) return;
     if (!sim.snapshot.alive[e.instanceId] || sim.snapshot.power[e.instanceId] < 0.5) return;
-    if (frameloopRef.current === "demand") { sim.kill(e.instanceId); return; } // no frames to animate a hold
     hold.current = { tile: e.instanceId, since: performance.now() };
+    invalidate(); // demand mode: the hold re-queues frames from useFrame
   };
   const onUp = () => {
     hold.current = null;
@@ -152,8 +152,9 @@ export default function Cluster() {
     const run = sim.run;
     const tick = sim.tick;
 
-    // hold-to-kill progress
+    // hold-to-kill progress (in demand mode keep asking for frames while held)
     if (hold.current) {
+      if (_state.frameloop === "demand") _state.invalidate();
       const p = (performance.now() - hold.current.since) / HOLD_MS;
       world.holdProgress = Math.min(1, p);
       if (p >= 1) {
@@ -216,7 +217,7 @@ export default function Cluster() {
     // ── workers: bob with deterministic activity, vanish with their node ──
     workerSlots.forEach((w, k) => {
       const p = tilePos(w.tile);
-      const on = s.alive[w.tile] ? s.power[w.tile] : 0;
+      const on = s.alive[w.tile] && w.w < run.workers[w.tile] ? s.power[w.tile] : 0;
       const bob = 0.5 + 0.5 * Math.sin((tick + w.phase * 9) * 0.11);
       tmp.position.set(p.x + w.dx, 0.14 + bob * 0.06 * on, p.z + w.dz);
       tmp.scale.setScalar(0.1 * on);

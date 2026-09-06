@@ -11,5 +11,7 @@ export const setShortcutsEnabled = (on: boolean) => {
 /** true when a key event should NOT trigger a single-key shortcut */
 export function typingTarget(e: KeyboardEvent) {
   const t = e.target as HTMLElement | null;
-  return !!t?.closest?.("input, textarea, select, [contenteditable], dialog");
+  if (t?.closest?.("input, textarea, select, [contenteditable], dialog")) return true;
+  // a case study or the mobile menu is up — shortcuts would fire underneath it
+  return !!document.querySelector('[aria-modal="true"], dialog[open]');
 }

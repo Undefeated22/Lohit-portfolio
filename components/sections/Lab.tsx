@@ -4,7 +4,7 @@ import { experiments, socials } from "@/data/portfolio";
 import { Reveal } from "../ui/Reveal";
 import SectionHeader from "../ui/SectionHeader";
 import { useGithubFeed, ago, GITHUB_ACCOUNTS } from "@/lib/github";
-import { sim, useSimSelector } from "@/lib/simStore";
+import { sim, useSimSelector, useHydrated } from "@/lib/simStore";
 import { phaseStart } from "@/lib/sim";
 
 // SHEET 04 — FAULT INJECTION. The lab IS the injection schedule: each
@@ -54,12 +54,13 @@ function Row({ i, name, category, tech, status, href }: { i: number } & (typeof 
   const chaos = sim.run.chaos[i];
   const at = chaos ? phaseStart("faults") + chaos.at : null;
   const fired = useSimSelector((s) => (at === null ? true : s.tick >= at));
+  const hydrated = useHydrated(); // chaos ticks come from the visitor's seed
   const st = STATUS[status];
   return (
     <li
       className={`grid grid-cols-[4.5rem_1fr_auto] items-center gap-4 border-b border-line py-4 transition-opacity duration-500 md:grid-cols-[4.5rem_1fr_1fr_auto] ${fired ? "" : "opacity-40"}`}
     >
-      <span className="type-index text-label">{at === null ? `F${String(i + 1).padStart(2, "0")}` : String(at).padStart(6, "0")}</span>
+      <span className="type-index text-label">{!hydrated || at === null ? `F${String(i + 1).padStart(2, "0")}` : String(at).padStart(6, "0")}</span>
       <a href={href ?? "#"} target={href?.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="link font-mono text-sm text-text">
         {name}
       </a>

@@ -55,7 +55,7 @@ export default function Scene() {
       >
         <color attach="background" args={["#0b1f4f"]} />
         <fog attach="fog" args={["#0b1f4f", 12, 34]} />
-        {monitor && (
+        {monitor && !reduced && (
           <PerformanceMonitor
             factor={1}
             flipflops={3}

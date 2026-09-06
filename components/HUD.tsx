@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { sim, useSimSelector } from "@/lib/simStore";
+import { sim, useSimSelector, useHydrated } from "@/lib/simStore";
 import { world } from "@/lib/state";
 import { TOTAL_TICKS } from "@/lib/sim";
 
@@ -24,10 +24,12 @@ export default function HUD() {
   const phase = useSimSelector((s) => s.phase);
   const faults = useSimSelector((s) => s.faults);
   const shrunk = useSimSelector((s) => s.shrunk);
-  const events = useSimSelector(
+  const hydrated = useHydrated();
+  const selected = useSimSelector(
     (s) => s.events.slice(-3),
     (a, b) => a.length === b.length && a.every((e, i) => e.tick === b[i].tick && e.text === b[i].text)
   );
+  const events = hydrated ? selected : []; // node numbers come from the visitor's seed
   const [seed, setSeed] = useState("");
   const [notice, setNotice] = useState("");
   useEffect(() => {

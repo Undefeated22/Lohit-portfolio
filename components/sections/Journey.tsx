@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { journey, education } from "@/data/portfolio";
 import { Reveal } from "../ui/Reveal";
 import SectionHeader from "../ui/SectionHeader";
@@ -12,9 +12,9 @@ import { sim, useSimSelector } from "@/lib/simStore";
 function Shrinker() {
   const faults = useSimSelector((s) => s.faults);
   const phase = useSimSelector((s) => s.phase);
-  const [result, setResult] = useState<ReturnType<typeof sim.shrink> | null>(null);
+  const result = useSimSelector(() => sim.shrunk); // the store replaces the object on change
   useEffect(() => {
-    if (phase === "shrink" && faults > 0 && !sim.shrunk) setResult(sim.shrink());
+    if (phase === "shrink" && faults > 0 && !sim.shrunk) sim.shrink();
   }, [phase, faults]);
   return (
     <div className="rule bg-bg p-5 md:p-6">
@@ -28,7 +28,7 @@ function Shrinker() {
           : `${faults} fault${faults === 1 ? "" : "s"} injected so far — including the seed's own chaos. Shrink finds the smallest subset that still makes a shard unavailable.`}
       </p>
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button onClick={() => setResult(sim.shrink())} disabled={faults === 0} className="btn btn-primary disabled:cursor-not-allowed disabled:opacity-40">
+        <button onClick={() => sim.shrink()} disabled={faults === 0} className="btn btn-primary disabled:cursor-not-allowed disabled:opacity-40">
           {result ? "SHRINK AGAIN" : "SHRINK FAULTS"}
         </button>
         <button onClick={() => sim.killAny()} className="btn">KILL A NODE</button>

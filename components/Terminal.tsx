@@ -103,6 +103,7 @@ export default function Terminal() {
       case "reseed": return print(String(commands.find((c) => c.id === "sim:reseed")!.run()), "ok");
       case "goto": {
         const id = arg.replace(/^#/, "");
+        lenisRef?.start(); // lenis.scrollTo is a no-op while stopped
         setOpen(false);
         scrollToSection(`#${id === "home" ? "top" : id}`);
         return;
@@ -128,7 +129,7 @@ export default function Terminal() {
       data-ui
       data-lenis-prevent
       aria-labelledby="term-h"
-      className="fixed inset-x-0 bottom-0 z-[60] flex h-[42vh] flex-col border-t border-text bg-bg-deep/95 backdrop-blur-md"
+      className="fixed inset-x-0 bottom-0 z-[80] flex h-[42vh] flex-col border-t border-text bg-bg-deep/95 backdrop-blur-md"
     >
       <div className="flex items-center justify-between border-b border-line px-4 py-2">
         <h2 id="term-h" className="type-label text-text">terminal — lohit.sys</h2>

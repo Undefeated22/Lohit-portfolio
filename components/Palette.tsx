@@ -12,11 +12,13 @@ export default function Palette() {
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const [result, setResult] = useState("");
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const items = useMemo(() => (q ? search(q, 14) : commands.slice(0, 14)), [q]);
 
   const open = () => {
     if (!dialog.current || dialog.current.open) return;
+    clearTimeout(closeTimer.current);
     setQ(""); setActive(0); setResult("");
     dialog.current.showModal();
     requestAnimationFrame(() => input.current?.focus());
@@ -53,7 +55,7 @@ export default function Palette() {
     const out = cmd.run();
     if (typeof out === "string") {
       setResult(out);
-      setTimeout(close, 900);
+      closeTimer.current = setTimeout(close, 900);
     } else close();
   };
 
@@ -71,6 +73,7 @@ export default function Palette() {
     <dialog
       ref={dialog}
       data-ui
+      data-lenis-prevent
       onClick={(e) => e.target === dialog.current && close()}
       className="m-auto w-[min(92vw,640px)] bg-bg p-0 text-text shadow-hard-chalk backdrop:bg-bg-deep/70 backdrop:backdrop-blur-sm open:animate-[pal-in_.25s_var(--ease-out-expo)]"
       aria-label="Command palette"
