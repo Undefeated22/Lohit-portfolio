@@ -262,14 +262,16 @@ export default function Cluster() {
     const { phase, local } = phaseAt(tick);
     const pi = PHASES.indexOf(phase);
     const yawKeys = [0, -8, 6, -10, 4, 0, 0];
-    const distKeys = [12.5, 11, 9.5, 11, 10.5, 13, 13];
+    // closer on landscape screens so the drawing fills the frame; portrait
+    // backs off below to keep the whole cluster in view
+    const distKeys = [10.8, 9.4, 8.4, 9.4, 9, 11, 11];
     const yaw = THREE.MathUtils.degToRad(45 + THREE.MathUtils.lerp(yawKeys[pi], yawKeys[pi + 1], local));
     let dist = THREE.MathUtils.lerp(distKeys[pi], distKeys[pi + 1], local);
     // narrow (portrait) viewports need the camera further back to keep the
     // whole cluster in frame under the fixed 32° vertical fov
     const aspect = size.width / size.height;
     const portrait = aspect < 1.1;
-    if (portrait) dist *= Math.min(1.7, 1.1 / aspect);
+    if (portrait) dist *= Math.min(2.2, 1.4 / aspect);
     const fov = portrait ? 44 : 32;
     if ((camera as THREE.PerspectiveCamera).fov !== fov) {
       (camera as THREE.PerspectiveCamera).fov = fov;
@@ -278,7 +280,11 @@ export default function Cluster() {
     let pitch = THREE.MathUtils.degToRad(35);
     lookAt.set(0, 0, 0);
     // on wide screens the hero type owns the left; push the cluster right
-    if (size.width > 900 && pi <= 1) lookAt.x = -1.6 * (pi === 0 ? 1 : 1 - local);
+    if (size.width > 900 && pi <= 1) {
+      const w = pi === 0 ? 1 : 1 - local;
+      lookAt.x = -2.4 * w; // cluster sits right of the type column
+      lookAt.z = 0.9 * w; // and rides a little higher in the frame
+    }
     if (world.project) {
       const k = projects.findIndex((p) => p.slug === world.project);
       const w = run.workflows[k];
