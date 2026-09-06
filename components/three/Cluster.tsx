@@ -271,7 +271,7 @@ export default function Cluster() {
     // whole cluster in frame under the fixed 32° vertical fov
     const aspect = size.width / size.height;
     const portrait = aspect < 1.1;
-    if (portrait) dist *= Math.min(2.2, 1.4 / aspect);
+    if (portrait) dist *= Math.min(1.45, 1.0 / aspect); // close enough to fill the width
     const fov = portrait ? 44 : 32;
     if ((camera as THREE.PerspectiveCamera).fov !== fov) {
       (camera as THREE.PerspectiveCamera).fov = fov;
@@ -284,6 +284,11 @@ export default function Cluster() {
       const w = pi === 0 ? 1 : 1 - local;
       lookAt.x = -2.4 * w; // cluster sits right of the type column
       lookAt.z = 0.9 * w; // and rides a little higher in the frame
+    } else if (size.width <= 900 && pi <= 1) {
+      // portrait: lift the drawing into the upper half so the type owns the bottom
+      const w = pi === 0 ? 1 : 1 - local;
+      lookAt.x = 2.8 * w;
+      lookAt.z = 2.8 * w;
     }
     if (world.project) {
       const k = projects.findIndex((p) => p.slug === world.project);
