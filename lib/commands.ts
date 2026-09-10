@@ -1,10 +1,10 @@
 "use client";
 
-import { identity, projects, socials } from "@/data/portfolio";
+import { identity, projects, socials, colophon } from "@/data/portfolio";
 import { scrollToSection } from "@/components/SmoothScroll";
 import { sim } from "./simStore";
 import { shortcutsEnabled, setShortcutsEnabled } from "./shortcuts";
-import { printSheet } from "./print";
+import { printSheet, printSheetPng } from "./print";
 import { lenisRef } from "@/components/SmoothScroll";
 import { world } from "./state";
 
@@ -66,11 +66,11 @@ export const commands: Command[] = [
   go("journey", "Journey — shrink", ["experience", "timeline", "education"]),
   go("contact", "Contact — exit 0", ["email", "hire"]),
 
-  ...projects.map<Command>((p) => ({
+  ...[...projects, colophon].map<Command>((p) => ({
     id: `open:${p.slug}`,
-    label: `Open ${p.name} case study`,
+    label: p.index === "00" ? "How this drawing works (sheet 00)" : `Open ${p.name} case study`,
     group: "Projects",
-    keywords: [p.slug, ...p.tech.map((t) => t.toLowerCase())],
+    keywords: [p.slug, "colophon", "how it works", ...p.tech.map((t) => t.toLowerCase())],
     run: () => { openProject(p.slug); },
   })),
 
@@ -113,6 +113,16 @@ export const commands: Command[] = [
     keywords: ["export", "download", "blueprint", "save", "image"],
     shortcut: "P",
     run: () => printSheet(),
+  },
+  {
+    id: "sim:printpng",
+    label: "print this sheet (PNG)",
+    group: "Simulator",
+    keywords: ["export", "image", "share", "png"],
+    run: () => {
+      printSheetPng().then((m) => emit("lohit:notice", m));
+      return "rasterising sheet 07 …";
+    },
   },
   {
     id: "sim:reseed",

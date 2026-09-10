@@ -97,3 +97,33 @@ export function printSheet(): string {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
   return `saved ${name}`;
 }
+
+/** The same sheet rasterised to PNG at 2× — for the places that won't take SVG. */
+export function printSheetPng(): Promise<string> {
+  const svg = sheetSvg();
+  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = W * 2; c.height = H * 2;
+      const ctx = c.getContext("2d");
+      if (!ctx) return resolve("canvas unavailable");
+      ctx.scale(2, 2);
+      ctx.drawImage(img, 0, 0);
+      c.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        if (!blob) return resolve("could not rasterise the sheet");
+        const name = `lohit-sheet-07-${sim.seedHex}-tick${String(sim.tick).padStart(4, "0")}.png`;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+        resolve(`saved ${name}`);
+      }, "image/png");
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve("could not render the sheet"); };
+    img.src = url;
+  });
+}

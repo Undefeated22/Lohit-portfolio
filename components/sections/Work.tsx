@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring } from "framer-motion";
-import { projects, type Project } from "@/data/portfolio";
+import { projects, colophon, type Project } from "@/data/portfolio";
+
+const SHEETS: Project[] = [...projects, colophon];
 import { diagrams } from "@/data/diagrams";
 import Diagram from "../ui/Diagram";
 import { Reveal } from "../ui/Reveal";
@@ -98,7 +100,7 @@ function CaseStudy({ p, onClose, onSwitch }: { p: Project; onClose: () => void; 
   }, [p.slug, readRaw]);
 
   const i = projects.findIndex((x) => x.slug === p.slug);
-  const next = projects[(i + 1) % projects.length];
+  const next = i < 0 ? projects[0] : projects[(i + 1) % projects.length];
   const diagram = diagrams[p.slug];
 
   return (
@@ -118,7 +120,7 @@ function CaseStudy({ p, onClose, onSwitch }: { p: Project; onClose: () => void; 
     >
       <div className="sticky top-0 z-10 border-b border-text bg-bg/90 backdrop-blur-md">
         <div className="flex items-center justify-between px-5 py-3 md:px-8">
-          <span className="type-label text-text">WORKFLOW {p.index} — {p.slug} · EVENT HISTORY</span>
+          <span className="type-label text-text">{p.index === "00" ? "SHEET 00 — this drawing · COLOPHON" : `WORKFLOW ${p.index} — ${p.slug} · EVENT HISTORY`}</span>
           <button ref={closeRef} onClick={onClose} className="type-label link text-text">CLOSE ✕</button>
         </div>
         <motion.div aria-hidden className="absolute inset-x-0 bottom-0 h-px origin-left bg-text/60" style={{ scaleX: reduced ? readRaw : read }} />
@@ -196,7 +198,7 @@ export default function Work() {
   useEffect(() => {
     const fromHash = () => {
       const m = location.hash.match(/^#project\/(.+)$/);
-      return m ? projects.find((x) => x.slug === m[1]) ?? null : null;
+      return m ? SHEETS.find((x) => x.slug === m[1]) ?? null : null;
     };
     const initial = fromHash();
     if (initial) setActive(initial);

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { identity, projects, stack, socials } from "@/data/portfolio";
+import { identity, projects, stack, socials, colophon } from "@/data/portfolio";
 import { commands, openProject, replayRun } from "@/lib/commands";
-import { printSheet } from "@/lib/print";
+import { printSheet, printSheetPng } from "@/lib/print";
 import { sim } from "@/lib/simStore";
 import { fetchFeed, ago } from "@/lib/github";
 import { lenisRef, scrollToSection } from "./SmoothScroll";
@@ -67,10 +67,10 @@ export default function Terminal() {
     if (!cmd) return;
     history.current.push(raw);
     hIdx.current = -1;
-    const slugOf = (s: string) => projects.find((p) => p.slug === s || p.slug.startsWith(s) || p.name.toLowerCase() === s.toLowerCase());
+    const slugOf = (s: string) => [...projects, colophon].find((p) => p.slug === s || p.slug.startsWith(s) || p.name.toLowerCase() === s.toLowerCase());
     switch (cmd) {
       case "help": return print(HELP);
-      case "ls": return print(projects.map((p) => `${p.index}  ${p.slug.padEnd(16)} ${p.tagline}`).join("\n"));
+      case "ls": return print([colophon, ...projects].map((p) => `${p.index}  ${p.slug.padEnd(16)} ${p.tagline}`).join("\n"));
       case "cat": {
         const p = slugOf(arg);
         if (!p) return print(`cat: ${arg}: no such project`, "err");
@@ -103,7 +103,10 @@ export default function Terminal() {
       }
       case "reseed": return print(String(commands.find((c) => c.id === "sim:reseed")!.run()), "ok");
       case "replay": { setOpen(false); const msg = replayRun(); window.dispatchEvent(new CustomEvent("lohit:notice", { detail: msg })); return; }
-      case "print": return print(printSheet(), "ok");
+      case "print": {
+        if (arg === "png") { printSheetPng().then((m) => print(m, "ok")); return; }
+        return print(printSheet(), "ok");
+      }
       case "goto": {
         const id = arg.replace(/^#/, "");
         lenisRef?.start(); // lenis.scrollTo is a no-op while stopped

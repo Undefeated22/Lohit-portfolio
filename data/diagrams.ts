@@ -118,6 +118,31 @@ export const diagrams: Record<string, Diagram> = {
       { from: "inv", to: "pg", label: "assert" },
     ],
   },
+  "this-drawing": {
+    caption: "the drawing is a renderer of state, never a source of it · the URL is a complete run",
+    nodes: [
+      { id: "scroll", x: 20, y: 60, w: 130, h: 50, label: "Scroll", note: "Lenis → read head at 35% of the viewport" },
+      { id: "sim", x: 210, y: 60, w: 170, h: 50, label: "lib/sim.ts", note: "pure discrete-event simulator: leases, fencing tokens, chaos, ddmin", hot: true },
+      { id: "store", x: 440, y: 60, w: 160, h: 50, label: "simStore", note: "sections → phases → ticks; kill / shrink / seed" },
+      { id: "url", x: 660, y: 60, w: 120, h: 50, label: "URL hash", note: "#seed=… &log=tile@tick — the run, shareable" },
+      { id: "cluster", x: 210, y: 170, w: 170, h: 50, label: "Cluster.tsx", note: "5 instanced meshes + self-plotting wire, camera = f(phase)" },
+      { id: "post", x: 440, y: 170, w: 160, h: 50, label: "Blueprint pass", note: "SMAA · bloom · depth edges · Bayer dither · misregistration" },
+      { id: "dom", x: 660, y: 170, w: 120, h: 50, label: "DOM sheets", note: "every word lives here — HUD, captions, dialogs" },
+      { id: "cmd", x: 210, y: 270, w: 170, h: 50, label: "commands", note: "⌘K palette · / terminal · K S R P shortcuts" },
+      { id: "print", x: 440, y: 270, w: 160, h: 50, label: "print.ts", note: "sheet 07 as SVG / PNG, from the same snapshot" },
+    ],
+    edges: [
+      { from: "scroll", to: "store", label: "tick" },
+      { from: "store", to: "sim", label: "snapshot" },
+      { from: "store", to: "url", label: "publish" },
+      { from: "url", to: "store", label: "load" },
+      { from: "sim", to: "cluster", label: "state" },
+      { from: "cluster", to: "post", label: "frame" },
+      { from: "store", to: "dom", label: "narrate" },
+      { from: "cmd", to: "store", label: "kill · replay" },
+      { from: "print", to: "sim", label: "read" },
+    ],
+  },
   "chess-analyser": {
     caption: "the engine belongs on the client · no server, no queue, no bill",
     nodes: [

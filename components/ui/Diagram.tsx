@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Diagram as DiagramT, DNode } from "@/data/diagrams";
 
 // Hand-rolled SVG architecture diagram: chalk boxes, bezier edges with a
@@ -23,6 +23,28 @@ export default function Diagram({ data, title }: { data: DiagramT; title: string
   const [hover, setHover] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
   const active = hover ?? pinned;
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  // plot the edges in order, like the cluster's wire; nodes appear behind the pen
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const paths = Array.from(svg.querySelectorAll<SVGPathElement>("path.dg-edge"));
+    const nodes = Array.from(svg.querySelectorAll<SVGGElement>("g.dg-node"));
+    const anims: Animation[] = [];
+    paths.forEach((p, i) => {
+      const len = p.getTotalLength();
+      p.style.strokeDasharray = `${len}`;
+      p.style.strokeDashoffset = `${len}`;
+      const a = p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 520, delay: 120 + i * 110, easing: "cubic-bezier(0.16,1,0.3,1)", fill: "forwards" });
+      a.onfinish = () => { p.style.strokeDasharray = ""; p.style.strokeDashoffset = ""; };
+      anims.push(a);
+    });
+    nodes.forEach((n, i) => {
+      anims.push(n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 200 + i * 90, fill: "backwards" }));
+    });
+    return () => anims.forEach((a) => a.cancel());
+  }, [data]);
   const byId = Object.fromEntries(data.nodes.map((n) => [n.id, n]));
   const note = active ? byId[active]?.note : null;
 
@@ -42,6 +64,7 @@ export default function Diagram({ data, title }: { data: DiagramT; title: string
       `}</style>
       <div className="overflow-x-auto">
       <svg
+        ref={svgRef}
         viewBox="0 0 800 360"
         className="h-auto w-full min-w-[560px]"
         role="group"

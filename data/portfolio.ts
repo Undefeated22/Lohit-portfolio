@@ -226,6 +226,33 @@ export const projects: Project[] = [
   },
 ];
 
+// SHEET 00 — the portfolio itself, held to the same standard as the work.
+export const colophon: Project = {
+  slug: "this-drawing",
+  index: "00",
+  name: "THIS DRAWING",
+  tagline: "The portfolio is a deterministic simulation of a shard cluster — seeded, replayable, printable.",
+  role: "Design + Engineering",
+  year: "2026",
+  tech: ["Next.js 16", "React Three Fiber", "GLSL", "postprocessing", "Lenis", "TypeScript"],
+  overview:
+    "Everything behind this page is one run of a 6×6 shard cluster: leases, fencing tokens, workflows, chaos and a delta-debugging shrinker. Scroll is the clock. The seed — and every node you kill — lives in the URL, so a link reproduces a visit exactly. It is built on the same idea as dex: if every source of nondeterminism is controlled, a run is a pure function of its inputs.",
+  problem:
+    "A portfolio is usually a page that describes engineering. Mine wanted to be the engineering: a system you can break in front of you, that recovers the way my real systems do, and that proves it by being reproducible.",
+  thinking:
+    "Nothing on the drawing may depend on wall-clock time — only on (seed, tick, faults). Then scrolling back is a genuine rewind, a URL is a complete run, and replay is trivially correct. The 3D layer is a renderer of that state, never a source of it. The DOM owns every word; WebGL owns only the drawing.",
+  architecture:
+    "lib/sim.ts is a pure, time-ordered discrete-event simulator (mulberry32 PRNG, per-shard leases with fencing tokens, transfer/return queues, a real ddmin shrinker). lib/simStore.ts maps [data-phase] sections to phases and scroll to ticks, and publishes the seed and your kills to the URL hash. components/three/Cluster.tsx renders the snapshot with five instanced meshes plus a self-plotting wireframe; Scene.tsx runs a tiered post chain — SMAA, bloom on emissive rings, a custom depth-edge + ordered-dither 'blueprint' effect.",
+  interfaceNotes:
+    "A HUD narrates the run in plain words; drafting captions land on affected nodes; ⌘K opens a zero-dependency command palette on a native <dialog>; '/' opens a terminal sharing the same command registry; case studies are event histories with plotted architecture diagrams; R replays the visit from tick 0; P prints the sheet as SVG or PNG.",
+  technology:
+    "Next.js 16 static prerender, React 19, @react-three/fiber 9.7, three 0.185, @react-three/postprocessing 3.1 with a custom Effect (EffectAttribute.DEPTH, linearised depth Laplacian, closed-form 4×4 Bayer, R-plate misregistration), Lenis, Tailwind v4 tokens. Hydration-safe by rule: nothing seed-derived reaches the DOM before mount. Accessibility: focus-trapped dialogs, shortcuts with an off switch, reduced-motion path that keeps the drawing static but complete.",
+  outcome:
+    "One idea executed with restraint: a cobalt blueprint that plots itself on arrival, breaks when you tell it to, heals by the rules of fencing, shrinks your faults to the ones that mattered, and hands you a file at the end. Reviewed by 40+ specialist agents across design, GLSL, React and accessibility lenses; every confirmed finding applied.",
+  github: "https://github.com/Undefeated22/Lohit-portfolio",
+  hue: 222,
+};
+
 export type Experiment = {
   name: string;
   category: string;

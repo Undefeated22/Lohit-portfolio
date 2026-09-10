@@ -5,8 +5,8 @@ import { identity, socials } from "@/data/portfolio";
 import { Reveal, RevealLines } from "../ui/Reveal";
 import { scrollToSection as go } from "../SmoothScroll";
 import { sim, useSimSelector } from "@/lib/simStore";
-import { commands, replayRun } from "@/lib/commands";
-import { printSheet } from "@/lib/print";
+import { commands, replayRun, openProject } from "@/lib/commands";
+import { printSheet, printSheetPng } from "@/lib/print";
 
 // SHEET 06 — EXIT 0. The run's own exit readout is the display type:
 // seed, faults, minimal set, return code. Then one sentence and an address.
@@ -58,7 +58,8 @@ export default function Contact() {
             </div>
             <div className="flex flex-wrap gap-3">
               <button onClick={() => flash(replayRun())} className="btn">REPLAY ↺</button>
-              <button onClick={() => flash(printSheet())} className="btn">PRINT SHEET</button>
+              <button onClick={() => flash(printSheet())} className="btn">PRINT SVG</button>
+              <button onClick={() => printSheetPng().then(flash)} className="btn">PRINT PNG</button>
             </div>
           </div>
         </Reveal>
@@ -82,7 +83,10 @@ export default function Contact() {
 
       <footer className="absolute inset-x-0 bottom-0 px-5 py-6 md:px-8">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
-          <span className="type-label">© 2026 {identity.name} · {identity.location.toUpperCase()}</span>
+          <span className="type-label flex flex-wrap items-center gap-x-5 gap-y-1">
+            <span>© 2026 {identity.name} · {identity.location.toUpperCase()}</span>
+            <button onClick={() => openProject("this-drawing")} className="link text-text">HOW THIS DRAWING WORKS — SHEET 00 →</button>
+          </span>
           <button onClick={() => go("#top")} className="type-label link text-text">BACK TO SHEET 01 ↑</button>
         </div>
       </footer>
