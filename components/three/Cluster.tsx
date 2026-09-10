@@ -21,6 +21,56 @@ const TILE = Array.from({ length: N }, (_, i) => ({ x: (i % GRID) - (GRID - 1) /
 const tilePos = (i: number) => TILE[i];
 const HOLD_MS = 650;
 const TRAIL_SEGS = 14;
+// chalk wire that plots itself: each vertex knows its tile's boot order and
+// its position along that tile's outline, so the boot phase draws the sheet
+// stroke by stroke and a bright pen head leads the line
+const wireVert = /* glsl */ `
+attribute float aOrder;
+attribute float aSeg;
+uniform float uBootN; // boot progress in tiles (0..36)
+varying float vHide;
+varying float vPen;
+void main(){
+  float f = clamp(uBootN - aOrder, 0.0, 1.0); // how much of this tile's outline is drawn
+  vHide = step(f, aSeg);                        // segment not yet reached
+  vPen = smoothstep(f - 0.12, f, aSeg) * step(aSeg, f) * step(aOrder, uBootN) * step(uBootN, aOrder + 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+const wireFrag = /* glsl */ `
+uniform vec3 uChalk;
+varying float vHide;
+varying float vPen;
+void main(){
+  if (vHide > 0.5) discard;
+  gl_FragColor = vec4(uChalk * (1.0 + vPen * 3.0), 0.34 + vPen * 0.66);
+}`;
+
+// lease rings as dashed arcs that rotate with the tick — the lease heartbeat
+const ringVert = /* glsl */ `
+varying float vAng;
+varying vec3 vCol;
+void main(){
+  vAng = atan(position.y, position.x);
+  #ifdef USE_INSTANCING_COLOR
+    vCol = instanceColor;
+  #else
+    vCol = vec3(1.0);
+  #endif
+  vec4 p = vec4(position, 1.0);
+  #ifdef USE_INSTANCING
+    p = instanceMatrix * p;
+  #endif
+  gl_Position = projectionMatrix * modelViewMatrix * p;
+}`;
+const ringFrag = /* glsl */ `
+uniform float uTick;
+varying float vAng;
+varying vec3 vCol;
+void main(){
+  float dash = step(0.35, fract(vAng * 1.9099 + uTick * 0.012)); // 12 dashes, drifting
+  gl_FragColor = vec4(vCol, mix(0.22, 1.0, dash));
+}`;
+
 const WF_START = phaseStart("workflows");
 
 // drafting grid + dithered under-glow on the ground plane
@@ -96,26 +146,39 @@ export default function Cluster() {
   const lookAt = useMemo(() => new THREE.Vector3(), []);
   const hueColors = useMemo(() => projects.map((p) => new THREE.Color().setHSL(p.hue / 360, 0.85, 0.62)), []);
 
-  // static wireframe of the tile grid — the drawing's chalk lines
+  // wireframe of the tile grid — the drawing's chalk lines, plotted in boot order
   const wire = useMemo(() => {
     const pts: number[] = [];
-    const h = 0.06, s = 0.46;
+    const order: number[] = [];
+    const seg: number[] = [];
+    const h = 0.06, sz = 0.46;
+    const bootIndex = new Array<number>(N);
+    sim.run.bootOrder.forEach((tile, k) => { bootIndex[tile] = k; });
     for (let i = 0; i < N; i++) {
       const c = tilePos(i);
       const corners = [
-        [c.x - s, c.z - s], [c.x + s, c.z - s], [c.x + s, c.z + s], [c.x - s, c.z + s],
+        [c.x - sz, c.z - sz], [c.x + sz, c.z - sz], [c.x + sz, c.z + sz], [c.x - sz, c.z + sz],
       ];
-      for (let k = 0; k < 4; k++) {
-        const a = corners[k], b = corners[(k + 1) % 4];
-        pts.push(a[0], h, a[1], b[0], h, b[1]);
-        pts.push(a[0], -h, a[1], b[0], -h, b[1]);
-        pts.push(a[0], -h, a[1], a[0], h, a[1]);
-      }
+      // 12 strokes per tile: top square, bottom square, 4 uprights — in plotting order
+      const strokes: [number[], number[]][] = [];
+      for (let k = 0; k < 4; k++) strokes.push([[corners[k][0], h, corners[k][1]], [corners[(k + 1) % 4][0], h, corners[(k + 1) % 4][1]]]);
+      for (let k = 0; k < 4; k++) strokes.push([[corners[k][0], h, corners[k][1]], [corners[k][0], -h, corners[k][1]]]);
+      for (let k = 0; k < 4; k++) strokes.push([[corners[k][0], -h, corners[k][1]], [corners[(k + 1) % 4][0], -h, corners[(k + 1) % 4][1]]]);
+      strokes.forEach(([a, b], j) => {
+        pts.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+        order.push(bootIndex[i], bootIndex[i]);
+        seg.push(j / 12, (j + 1) / 12);
+      });
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+    g.setAttribute("aOrder", new THREE.Float32BufferAttribute(order, 1));
+    g.setAttribute("aSeg", new THREE.Float32BufferAttribute(seg, 1));
     return g;
   }, []);
+  const wireMat = useRef<THREE.ShaderMaterial>(null!);
+  const ringMat = useRef<THREE.ShaderMaterial>(null!);
+  const pen = useRef<THREE.Mesh>(null!);
   useEffect(() => () => wire.dispose(), [wire]);
 
   // workers: 3 fixed slots per tile; a slot the current run does not use is
@@ -299,6 +362,28 @@ export default function Cluster() {
     heads.current.instanceMatrix.needsUpdate = true;
     heads.current.instanceColor!.needsUpdate = true;
 
+    // ── the plotter: wire reveal + pen head position during boot ──
+    const bootN = Math.min(N, (tick / 240) * N);
+    wireMat.current.uniforms.uBootN.value = bootN;
+    ringMat.current.uniforms.uTick.value = tick;
+    {
+      const k = Math.min(N - 1, Math.floor(bootN));
+      const f = bootN - k;
+      const drawing = bootN < N;
+      const tile = run.bootOrder[k];
+      const c = TILE[tile];
+      const sz = 0.46, h = 0.06;
+      // walk the 12 strokes: 4 top edges, 4 uprights, 4 bottom edges
+      const j = Math.min(11, Math.floor(f * 12)), u = f * 12 - j;
+      const corners = [[c.x - sz, c.z - sz], [c.x + sz, c.z - sz], [c.x + sz, c.z + sz], [c.x - sz, c.z + sz]];
+      let px = c.x, py = h, pz = c.z;
+      if (j < 4) { const a = corners[j], b = corners[(j + 1) % 4]; px = a[0] + (b[0] - a[0]) * u; pz = a[1] + (b[1] - a[1]) * u; py = h; }
+      else if (j < 8) { const a = corners[j - 4]; px = a[0]; pz = a[1]; py = h - 2 * h * u; }
+      else { const a = corners[j - 8], b = corners[(j - 8 + 1) % 4]; px = a[0] + (b[0] - a[0]) * u; pz = a[1] + (b[1] - a[1]) * u; py = -h; }
+      pen.current.position.set(px, py, pz);
+      pen.current.scale.setScalar(drawing ? 0.05 : 0.0001);
+    }
+
     // ── ground glow follows the cluster's overall power ──
     let avg = 0;
     for (let i = 0; i < N; i++) avg += s.power[i];
@@ -426,8 +511,20 @@ export default function Cluster() {
       </mesh>
 
       <lineSegments geometry={wire}>
-        <lineBasicMaterial color="#eef3ff" transparent opacity={0.28} />
+        <shaderMaterial
+          ref={wireMat}
+          vertexShader={wireVert}
+          fragmentShader={wireFrag}
+          uniforms={{ uBootN: { value: 0 }, uChalk: { value: CHALK } }}
+          transparent
+          depthWrite={false}
+        />
       </lineSegments>
+      {/* the pen head leading the line while the sheet is being plotted */}
+      <mesh ref={pen} scale={0.0001}>
+        <sphereGeometry args={[1, 10, 10]} />
+        <meshBasicMaterial color={[4, 4.2, 4.6]} toneMapped={false} />
+      </mesh>
 
       <instancedMesh
         ref={slabs}
@@ -453,8 +550,16 @@ export default function Cluster() {
       </instancedMesh>
 
       <instancedMesh ref={rings} args={[undefined, undefined, N]} frustumCulled={false}>
-        <torusGeometry args={[0.27, 0.018, 8, 40]} />
-        <meshBasicMaterial toneMapped={false} />
+        <torusGeometry args={[0.27, 0.018, 8, 48]} />
+        <shaderMaterial
+          ref={ringMat}
+          vertexShader={ringVert}
+          fragmentShader={ringFrag}
+          uniforms={{ uTick: { value: 0 } }}
+          transparent
+          depthWrite={false}
+          toneMapped={false}
+        />
       </instancedMesh>
 
       <instancedMesh ref={flags} args={[undefined, undefined, N]} frustumCulled={false}>

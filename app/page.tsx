@@ -22,6 +22,7 @@ export default function Home() {
     <Providers>
       <SmoothScroll />
       <Scene />
+      <div aria-hidden className="exposure pointer-events-none fixed inset-0 z-[5]" />
       <Nav />
       <main id="main" tabIndex={-1} className="relative z-10 outline-none">
         <Hero />

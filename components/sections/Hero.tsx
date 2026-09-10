@@ -55,6 +55,14 @@ export default function Hero() {
             className="text-[clamp(1.5rem,4.2vw,3.6rem)] font-medium text-text-2"
           />
         </h1>
+        {/* dimension callout, as a drafter would measure the title */}
+        <motion.div {...rise(0.5)} className="mt-5 max-w-[42ch]" aria-hidden>
+          <div className="dim-line" />
+          <div className="type-label mt-2 flex justify-between">
+            <span>36 NODES · 6 WORKFLOWS</span>
+            <span>SCALE 1:36 · SEED {seed}</span>
+          </div>
+        </motion.div>
 
         <div className="mt-10 grid gap-8 md:grid-cols-[minmax(0,52ch)_1fr] md:items-end">
           <motion.p {...rise(0.6)} className="max-w-[52ch] text-[15px] leading-relaxed text-text-2 md:text-base">

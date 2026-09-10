@@ -163,6 +163,32 @@
     background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
   }
 
+  /* cyanotype exposure — a print is never evenly lit. Sits between the
+     drawing and the DOM so both take the same light. */
+  .exposure {
+    background:
+      radial-gradient(110% 80% at 12% 8%, color-mix(in srgb, var(--color-text) 9%, transparent), transparent 58%),
+      radial-gradient(70% 60% at 88% 96%, color-mix(in srgb, var(--color-bg-deep) 85%, transparent), transparent 62%);
+  }
+
+  /* dimension line: end ticks + centred label, as on a drawing */
+  .dim-line {
+    position: relative;
+    height: 1px;
+    background: color-mix(in srgb, var(--color-text) 45%, transparent);
+  }
+  .dim-line::before,
+  .dim-line::after {
+    content: "";
+    position: absolute;
+    top: -5px;
+    width: 1px;
+    height: 11px;
+    background: color-mix(in srgb, var(--color-text) 70%, transparent);
+  }
+  .dim-line::before { left: 0; }
+  .dim-line::after { right: 0; }
+
   /* index labels: seq numbers, dates, ticks — tabular mono */
   .type-index {
     font-family: var(--font-mono);
