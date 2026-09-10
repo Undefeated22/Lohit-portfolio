@@ -7,6 +7,7 @@ import { scrollToSection as go } from "../SmoothScroll";
 import { sim, useSimSelector } from "@/lib/simStore";
 import { commands, replayRun, openProject } from "@/lib/commands";
 import { printSheet, printSheetPng } from "@/lib/print";
+import { setSound } from "@/lib/audio";
 
 // SHEET 06 — EXIT 0. The run's own exit readout is the display type:
 // seed, faults, minimal set, return code. Then one sentence and an address.
@@ -25,6 +26,7 @@ export default function Contact() {
   const copyEmail = async () => { try { await navigator.clipboard.writeText(identity.email); flash("email copied"); } catch { flash("copy failed — use the button"); } };
   const shareRun = () => flash(String(commands.find((c) => c.id === "sim:seed")!.run()));
   const logSize = useSimSelector(() => sim.userFaults.length);
+  const operators = useSimSelector(() => sim.operators);
 
   return (
     <section id="contact" data-phase="exit" aria-label="Contact" className="relative flex min-h-svh flex-col justify-center bg-bg-deep/60 px-5 py-28 md:px-8">
@@ -53,11 +55,12 @@ export default function Contact() {
               <p className="mt-2 max-w-[56ch] text-sm text-text-2">
                 {logSize === 0
                   ? "You have not killed anything yet. Everything you do is appended to the URL as an event log — anyone with the link sees the same run, kills included, and can replay it from tick 0."
-                  : `${logSize} event${logSize === 1 ? "" : "s"} logged in the URL. Replay them from tick 0, print the drawing as it stands, or send the link — the receiver sees exactly what you did.`}
+                  : `${logSize} event${logSize === 1 ? "" : "s"} logged in the URL${operators > 1 ? `, handled by ${operators} operators so far` : ""}. Replay them from tick 0, print the drawing as it stands, or pass the link on — the next operator inherits your faults and adds their own. The cluster has to survive all of you.`}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <button onClick={() => flash(replayRun())} className="btn">REPLAY ↺</button>
+              <button onClick={() => { void setSound(true); flash(replayRun()); }} className="btn">PLAY THE RUN ♪</button>
               <button onClick={() => flash(printSheet())} className="btn">PRINT SVG</button>
               <button onClick={() => printSheetPng().then(flash)} className="btn">PRINT PNG</button>
             </div>

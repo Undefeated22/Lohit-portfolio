@@ -22,6 +22,7 @@ export default function HUD() {
   const [hover, setHover] = useState<{ tile: number; hold: number; alive: boolean }>({ tile: -1, hold: 0, alive: true });
   const [replaying, setReplaying] = useState(false);
   const logSize = useSimSelector(() => sim.userFaults.length);
+  const operators = useSimSelector(() => sim.operators);
 
   const phase = useSimSelector((s) => s.phase);
   const faults = useSimSelector((s) => s.faults);
@@ -87,6 +88,7 @@ export default function HUD() {
           <span>phase <span className="text-text">{PHASE_LABEL[phase]}</span></span>
           <span>faults <span className={faults ? "text-accent" : "text-text"}>{faults}</span></span>
           <span>log <span className="text-text">{logSize}</span></span>
+          {operators > 1 && <span>ops <span className="text-text">{operators}</span></span>}
           {replaying && <span className="tag">REPLAY</span>}
           <span>
             shrunk{" "}

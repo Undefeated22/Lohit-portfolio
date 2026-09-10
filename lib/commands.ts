@@ -5,6 +5,7 @@ import { scrollToSection } from "@/components/SmoothScroll";
 import { sim } from "./simStore";
 import { shortcutsEnabled, setShortcutsEnabled } from "./shortcuts";
 import { printSheet, printSheetPng } from "./print";
+import { setSound, soundOn } from "./audio";
 import { lenisRef } from "@/components/SmoothScroll";
 import { world } from "./state";
 
@@ -105,6 +106,28 @@ export const commands: Command[] = [
     keywords: ["rewind", "playback", "durable", "log"],
     shortcut: "R",
     run: () => replayRun(),
+  },
+  {
+    id: "sim:sound",
+    label: "toggle sound — the run as a song",
+    group: "Simulator",
+    keywords: ["audio", "music", "mute", "listen"],
+    shortcut: "M",
+    run: () => {
+      const next = !soundOn();
+      void setSound(next);
+      return next ? "sound on — every event has a note; scroll is the playhead" : "sound off";
+    },
+  },
+  {
+    id: "sim:play",
+    label: "play this run (sound + replay)",
+    group: "Simulator",
+    keywords: ["perform", "listen", "song", "replay"],
+    run: () => {
+      void setSound(true);
+      return replayRun();
+    },
   },
   {
     id: "sim:print",

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { identity, projects, stack, socials, colophon } from "@/data/portfolio";
 import { commands, openProject, replayRun } from "@/lib/commands";
 import { printSheet, printSheetPng } from "@/lib/print";
+import { setSound, soundOn } from "@/lib/audio";
 import { sim } from "@/lib/simStore";
 import { fetchFeed, ago } from "@/lib/github";
 import { lenisRef, scrollToSection } from "./SmoothScroll";
@@ -14,7 +15,7 @@ import { shortcutsEnabled, typingTarget } from "@/lib/shortcuts";
 type Line = { prompt?: string; out: string; kind?: "err" | "ok" };
 
 const HELP = `commands: help ls cat <slug> open <slug> whoami stack contact gh
-          kill shrink replay print seed [hex] reseed goto <section> clear exit`;
+          kill shrink replay play sound [on|off] print [png] seed [hex] reseed goto <section> clear exit`;
 
 export default function Terminal() {
   const [open, setOpen] = useState(false);
@@ -103,6 +104,8 @@ export default function Terminal() {
       }
       case "reseed": return print(String(commands.find((c) => c.id === "sim:reseed")!.run()), "ok");
       case "replay": { setOpen(false); const msg = replayRun(); window.dispatchEvent(new CustomEvent("lohit:notice", { detail: msg })); return; }
+      case "sound": { const next = arg === "on" ? true : arg === "off" ? false : !soundOn(); void setSound(next); return print(`sound ${next ? "on — every event has a note" : "off"}`, "ok"); }
+      case "play": { void setSound(true); setOpen(false); const msg = replayRun(); window.dispatchEvent(new CustomEvent("lohit:notice", { detail: msg })); return; }
       case "print": {
         if (arg === "png") { printSheetPng().then((m) => print(m, "ok")); return; }
         return print(printSheet(), "ok");

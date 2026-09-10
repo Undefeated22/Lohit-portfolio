@@ -28,6 +28,8 @@ let run: Run | null = null;
 let tick = 0;
 let userFaults: Fault[] = [];
 let shrunk: { from: number; to: number; steps: number; tiles: number[] } | null = null;
+let operators = 0; // people who have added kills to this run (carried in the URL)
+let countedMe = false;
 let snap: Snapshot | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
@@ -52,13 +54,17 @@ function ensure() {
   seed = seedFromLocation();
   run = makeRun(seed, hues);
   userFaults = logFromLocation();
+  try {
+    const m = /ops=(\d+)/.exec(location.hash);
+    operators = m ? Number(m[1]) : userFaults.length ? 1 : 0;
+  } catch { operators = 0; }
   recompute();
 }
 
 /** the URL is the run: seed + the visit's event log */
 function hashFor() {
   const log = userFaults.map((f) => `${f.tile}@${f.at}`).join(",");
-  return `#seed=${seedHex(seed)}${log ? `&log=${log}` : ""}`;
+  return `#seed=${seedHex(seed)}${log ? `&log=${log}` : ""}${operators > 1 ? `&ops=${operators}` : ""}`;
 }
 function publishHash() {
   if (location.hash.startsWith("#project/")) return;
@@ -97,6 +103,7 @@ export const sim = {
   get run(): Run { ensure(); return run!; },
   get shrunk() { return shrunk; },
   get userFaults() { return userFaults; },
+  get operators() { return operators; },
   get version() { return version; },
 
   setTick,
@@ -124,6 +131,7 @@ export const sim = {
   kill(tile: number) {
     ensure();
     if (tile < 0 || tile >= N || !snap!.alive[tile]) return false;
+    if (!countedMe) { countedMe = true; operators += 1; } // a new operator takes the run
     userFaults = [...userFaults, { tile, at: tick, by: "user" }];
     shrunk = null;
     recompute();
@@ -161,6 +169,8 @@ export const sim = {
     run = makeRun(seed, hues);
     userFaults = [];
     shrunk = null;
+    operators = 0;
+    countedMe = false;
     try {
       const url = new URL(location.href);
       url.hash = hashFor().slice(1);

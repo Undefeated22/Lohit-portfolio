@@ -7,6 +7,7 @@ import { lenisRef, scrollToSection as go } from "./SmoothScroll";
 import { emit } from "@/lib/commands";
 import { sim, useSimSelector } from "@/lib/simStore";
 import { EASE } from "@/lib/motion";
+import { setSound, soundOn } from "@/lib/audio";
 
 const LINKS = [
   { label: "ABOUT", href: "#about" },
@@ -21,6 +22,12 @@ export default function Nav() {
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState("top");
   const [seed, setSeed] = useState("");
+  const [sound, setSoundState] = useState(false);
+  useEffect(() => {
+    const on = (e: Event) => setSoundState(!!(e as CustomEvent).detail);
+    window.addEventListener("lohit:sound", on);
+    return () => window.removeEventListener("lohit:sound", on);
+  }, []);
   const phase = useSimSelector((s) => s.phase);
   const faults = useSimSelector((s) => s.faults);
   const menuBtn = useRef<HTMLButtonElement>(null);
@@ -110,6 +117,15 @@ export default function Nav() {
             RESUME ↗
           </a>
           <button
+            onClick={() => void setSound(!soundOn())}
+            className={`type-label rule flex items-center gap-2 px-2.5 py-1.5 transition-colors hover:border-text ${sound ? "text-text" : ""}`}
+            aria-pressed={sound}
+            aria-label={sound ? "Sound on — turn off" : "Sound off — turn on (the run as a song)"}
+            title="M"
+          >
+            <span aria-hidden>{sound ? "●" : "○"}</span> SOUND
+          </button>
+          <button
             onClick={() => emit("lohit:palette")}
             className="type-label rule flex items-center gap-2 px-2.5 py-1.5 text-text transition-colors hover:border-text"
             aria-label="Open command palette"
@@ -123,6 +139,9 @@ export default function Nav() {
         </div>
 
         <div className="flex items-center gap-3 md:hidden">
+          <button onClick={() => void setSound(!soundOn())} className={`type-label rule px-2.5 py-1.5 ${sound ? "text-text" : ""}`} aria-pressed={sound} aria-label="Toggle sound">
+            {sound ? "●" : "○"}
+          </button>
           <button onClick={() => emit("lohit:palette")} className="type-label rule px-2.5 py-1.5 text-text" aria-label="Open command palette">
             ⌘K
           </button>
