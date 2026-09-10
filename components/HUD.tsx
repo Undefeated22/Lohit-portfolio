@@ -21,13 +21,15 @@ export default function HUD() {
   const tickEl = useRef<HTMLSpanElement>(null);
   const [hover, setHover] = useState<{ tile: number; hold: number; alive: boolean }>({ tile: -1, hold: 0, alive: true });
   const [replaying, setReplaying] = useState(false);
-  const logSize = useSimSelector(() => sim.userFaults.length);
-  const operators = useSimSelector(() => sim.operators);
 
   const phase = useSimSelector((s) => s.phase);
   const faults = useSimSelector((s) => s.faults);
   const shrunk = useSimSelector((s) => s.shrunk);
   const hydrated = useHydrated();
+  const logSizeNow = useSimSelector(() => sim.userFaults.length);
+  const operatorsNow = useSimSelector(() => sim.operators);
+  const logSize = hydrated ? logSizeNow : 0;
+  const operators = hydrated ? operatorsNow : 0;
   const selected = useSimSelector(
     (s) => s.events.slice(-3),
     (a, b) => a.length === b.length && a.every((e, i) => e.tick === b[i].tick && e.text === b[i].text)

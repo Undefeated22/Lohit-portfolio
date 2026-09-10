@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { identity, socials } from "@/data/portfolio";
 import { Reveal, RevealLines } from "../ui/Reveal";
 import { scrollToSection as go } from "../SmoothScroll";
-import { sim, useSimSelector } from "@/lib/simStore";
+import { sim, useSimSelector, useHydrated } from "@/lib/simStore";
 import { commands, replayRun, openProject } from "@/lib/commands";
 import { printSheet, printSheetPng } from "@/lib/print";
 import { setSound } from "@/lib/audio";
@@ -25,8 +25,11 @@ export default function Contact() {
   const flash = (s: string) => { setStatus(s); clearTimeout(timer.current); timer.current = setTimeout(() => setStatus(""), 2400); };
   const copyEmail = async () => { try { await navigator.clipboard.writeText(identity.email); flash("email copied"); } catch { flash("copy failed — use the button"); } };
   const shareRun = () => flash(String(commands.find((c) => c.id === "sim:seed")!.run()));
-  const logSize = useSimSelector(() => sim.userFaults.length);
-  const operators = useSimSelector(() => sim.operators);
+  const hydrated = useHydrated(); // the log and operators come from the URL — client only
+  const logSizeNow = useSimSelector(() => sim.userFaults.length);
+  const operatorsNow = useSimSelector(() => sim.operators);
+  const logSize = hydrated ? logSizeNow : 0;
+  const operators = hydrated ? operatorsNow : 0;
 
   return (
     <section id="contact" data-phase="exit" aria-label="Contact" className="relative flex min-h-svh flex-col justify-center bg-bg-deep/60 px-5 py-28 md:px-8">
