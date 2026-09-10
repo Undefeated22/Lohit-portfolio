@@ -278,6 +278,14 @@ export default function Cluster() {
     for (let i = 0; i < N; i++) {
       const pw = s.power[i];
       const alive = s.alive[i];
+      // the slab only exists once its outline has been plotted — it grows in
+      // behind the pen, so the boot phase is a drawing being made, not a fade
+      const grow = Math.min(1, pw * 1.25);
+      tmp.position.set(TILE[i].x, 0, TILE[i].z);
+      tmp.scale.set(0.92 * grow, 0.12 * Math.max(grow, 0.02), 0.92 * grow);
+      tmp.rotation.set(0, 0, 0);
+      tmp.updateMatrix();
+      slabs.current.setMatrixAt(i, tmp.matrix);
       col.copy(alive ? SURFACE : SURFACE_DEAD);
       if (alive) col.lerp(CHALK_DIM, 0.12 * pw);
       if (facetTiles && facetTiles.includes(i)) col.lerp(CHALK, 0.22);
@@ -287,6 +295,7 @@ export default function Cluster() {
       slabs.current.setColorAt(i, col);
     }
     slabs.current.instanceColor!.needsUpdate = true;
+    slabs.current.instanceMatrix.needsUpdate = true;
 
     // ── lease rings: on the holder's tile; yellow when the shard is orphaned ──
     for (let i = 0; i < N; i++) {
@@ -365,7 +374,9 @@ export default function Cluster() {
     // ── the plotter: wire reveal + pen head position during boot ──
     const bootN = Math.min(N, (tick / 240) * N);
     wireMat.current.uniforms.uBootN.value = bootN;
-    ringMat.current.uniforms.uTick.value = tick;
+    // dash phase = tick (rewinds with scroll) + a faint wall-clock drift so the
+    // rings still beat while the reader is standing still
+    ringMat.current.uniforms.uTick.value = tick + _state.clock.elapsedTime * 5;
     {
       const k = Math.min(N - 1, Math.floor(bootN));
       const f = bootN - k;
