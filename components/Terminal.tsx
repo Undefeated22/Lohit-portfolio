@@ -15,7 +15,7 @@ import { shortcutsEnabled, typingTarget } from "@/lib/shortcuts";
 type Line = { prompt?: string; out: string; kind?: "err" | "ok" };
 
 const HELP = `commands: help ls cat <slug> open <slug> whoami stack contact gh
-          kill shrink replay play sound [on|off] print [png] seed [hex] reseed goto <section> clear exit`;
+          tour kill shrink replay play sound [on|off] print [png] seed [hex] reseed goto <section> clear exit`;
 
 export default function Terminal() {
   const [open, setOpen] = useState(false);
@@ -117,6 +117,7 @@ export default function Terminal() {
         scrollToSection(`#${id === "home" ? "top" : id}`);
         return;
       }
+      case "tour": { setOpen(false); window.dispatchEvent(new CustomEvent("lohit:tour")); return; }
       case "clear": return setLines([]);
       case "exit": return setOpen(false);
       default: return print(`${cmd}: command not found — try 'help'`, "err");

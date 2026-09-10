@@ -4,6 +4,7 @@ import Nav from "@/components/Nav";
 import HUD from "@/components/HUD";
 import Palette from "@/components/Palette";
 import Terminal from "@/components/Terminal";
+import Tour from "@/components/Tour";
 import SmoothScroll from "@/components/SmoothScroll";
 import Hero from "@/components/sections/Hero";
 import About from "@/components/sections/About";
@@ -35,6 +36,7 @@ export default function Home() {
       <HUD />
       <Palette />
       <Terminal />
+      <Tour />
     </Providers>
   );
 }

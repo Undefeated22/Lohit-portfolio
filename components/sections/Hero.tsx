@@ -71,8 +71,11 @@ export default function Hero() {
             {identity.statement}
           </motion.p>
           <motion.div {...rise(0.75)} className="flex flex-wrap items-center gap-3 md:justify-end">
-            <button onClick={() => go("#about")} className="btn btn-primary">
-              EXPLORE THE RUN ↓
+            <button onClick={() => emit("lohit:tour")} className="btn btn-primary">
+              TAKE THE GUIDED RUN <kbd className="text-bg/70">T</kbd>
+            </button>
+            <button onClick={() => go("#about")} className="btn">
+              EXPLORE ↓
             </button>
             <button onClick={() => emit("lohit:terminal")} className="btn">
               TERMINAL <kbd className="text-label">/</kbd>

@@ -178,6 +178,14 @@ export const commands: Command[] = [
     },
   },
   {
+    id: "act:tour",
+    label: "Take the guided run (5 stops)",
+    group: "Actions",
+    keywords: ["tour", "help", "start", "how", "guide"],
+    shortcut: "T",
+    run: () => { emit("lohit:tour"); },
+  },
+  {
     id: "act:terminal",
     label: "Open terminal",
     group: "Actions",
