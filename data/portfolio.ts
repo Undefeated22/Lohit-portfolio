@@ -122,7 +122,7 @@ export const projects: Project[] = [
     outcome:
       "Crash recovery verified against a real process killed mid-execution on Postgres. One real triage used simulation shrinking to reduce 44 injected faults to the 2 that mattered.",
     github: "https://github.com/Undefeated22/dex",
-    hue: 210,
+    hue: 190,
   },
   {
     slug: "a4-satta-king",
@@ -198,7 +198,7 @@ export const projects: Project[] = [
     outcome:
       "Full-game engine analysis with zero backend. Open a PGN and the engine is already warm.",
     github: "https://github.com/Undefeated11/Chess_Analyser",
-    hue: 45,
+    hue: 170,
   },
   {
     slug: "brokerage-portal",

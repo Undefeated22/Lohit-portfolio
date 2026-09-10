@@ -8,6 +8,7 @@ import {
   seedFromLocation,
   seedHex,
   phaseStart,
+  phaseAt,
   PHASE_TICKS,
   TOTAL_TICKS,
   N,
@@ -34,19 +35,42 @@ const listeners = new Set<() => void>();
 // section → phase mapping, measured from the DOM by the page
 let sections: { phase: Phase; top: number; height: number }[] = [];
 
+/** `log=14@1088,3@1102` in the hash: the kills of the visit being shared */
+function logFromLocation(): Fault[] {
+  try {
+    const m = /log=([0-9@,]+)/.exec(location.hash);
+    if (!m) return [];
+    return m[1].split(",").map((p) => {
+      const [t, a] = p.split("@").map(Number);
+      return { tile: t, at: a, by: "user" as const };
+    }).filter((f) => Number.isInteger(f.tile) && f.tile >= 0 && f.tile < N && Number.isInteger(f.at) && f.at >= 0 && f.at <= TOTAL_TICKS);
+  } catch { return []; }
+}
+
 function ensure() {
   if (run) return;
   seed = seedFromLocation();
   run = makeRun(seed, hues);
+  userFaults = logFromLocation();
   recompute();
+}
+
+/** the URL is the run: seed + the visit's event log */
+function hashFor() {
+  const log = userFaults.map((f) => `${f.tile}@${f.at}`).join(",");
+  return `#seed=${seedHex(seed)}${log ? `&log=${log}` : ""}`;
+}
+function publishHash() {
+  if (location.hash.startsWith("#project/")) return;
+  history.replaceState(history.state, "", hashFor());
 }
 
 /** Write the run's seed into the URL so a shared link reproduces it. Called
     after mount — Next's router rewrites the URL during hydration. */
 function publishSeed() {
   ensure();
-  if (/seed=/.test(location.hash) || location.hash.startsWith("#project/")) return;
-  history.replaceState(history.state, "", `#seed=${seedHex(seed)}`);
+  if (location.hash.startsWith("#project/")) return;
+  if (!/seed=/.test(location.hash)) history.replaceState(history.state, "", hashFor());
 }
 
 function recompute() {
@@ -103,6 +127,7 @@ export const sim = {
     userFaults = [...userFaults, { tile, at: tick, by: "user" }];
     shrunk = null;
     recompute();
+    try { publishHash(); } catch { /* non-browser */ }
     return true;
   },
 
@@ -138,7 +163,7 @@ export const sim = {
     shrunk = null;
     try {
       const url = new URL(location.href);
-      url.hash = `seed=${seedHex(seed)}`;
+      url.hash = hashFor().slice(1);
       history.replaceState(history.state, "", url);
     } catch { /* non-browser */ }
     recompute();
@@ -147,6 +172,28 @@ export const sim = {
   randomSeed() {
     this.setSeed((Math.random() * 0xffff) | 0);
     return seed;
+  },
+
+  /** shareable URL of this exact run, kills included */
+  shareUrl() {
+    ensure();
+    return `${location.origin}${location.pathname}${hashFor()}`;
+  },
+
+  /** the last tick anything happened in this visit (for replay length) */
+  lastEventTick() {
+    ensure();
+    return userFaults.reduce((m, f) => Math.max(m, f.at + 100), 0);
+  },
+
+  /** inverse of onScroll: the scroll position at which the read head shows `t` */
+  scrollForTick(t: number, vh: number) {
+    if (!sections.length) return 0;
+    const clamped = Math.max(0, Math.min(TOTAL_TICKS, t));
+    const phase = phaseAt(clamped).phase;
+    const s = sections.find((x) => x.phase === phase) ?? sections[0];
+    const local = (clamped - phaseStart(phase)) / PHASE_TICKS[phase];
+    return Math.max(0, s.top + local * s.height - vh * 0.35);
   },
 
   subscribe(l: () => void) {

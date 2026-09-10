@@ -57,6 +57,7 @@ export default function SmoothScroll() {
 
     const lenis = new Lenis({ lerp: 0.1 });
     lenisRef = lenis;
+    if (process.env.NODE_ENV !== "production") (window as unknown as { __lenis?: unknown }).__lenis = lenis;
     lenis.on("scroll", (e: { scroll: number }) => sim.onScroll(e.scroll, window.innerHeight));
     let raf = 0;
     const loop = (t: number) => {

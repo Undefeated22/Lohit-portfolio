@@ -6,7 +6,7 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { sim } from "@/lib/simStore";
 import { world } from "@/lib/state";
-import { GRID, N, PHASES, phaseAt, phaseStart } from "@/lib/sim";
+import { GRID, N, PHASES, PHASE_TICKS, phaseAt, phaseStart } from "@/lib/sim";
 import { projects } from "@/data/portfolio";
 
 // ── palette as linear-ish colours (bloom reads values > 1) ──
@@ -21,6 +21,7 @@ const TILE = Array.from({ length: N }, (_, i) => ({ x: (i % GRID) - (GRID - 1) /
 const tilePos = (i: number) => TILE[i];
 const HOLD_MS = 650;
 const TRAIL_SEGS = 14;
+const WIRE_SZ = 0.467, WIRE_H = 0.064; // a hair outside the slab so lines never z-fight faces
 // chalk wire that plots itself: each vertex knows its tile's boot order and
 // its position along that tile's outline, so the boot phase draws the sheet
 // stroke by stroke and a bright pen head leads the line
@@ -28,29 +29,33 @@ const wireVert = /* glsl */ `
 attribute float aOrder;
 attribute float aSeg;
 uniform float uBootN; // boot progress in tiles (0..36)
-varying float vHide;
-varying float vPen;
+varying float vSeg;
+varying float vF;
+varying float vLive;
 void main(){
-  float f = clamp(uBootN - aOrder, 0.0, 1.0); // how much of this tile's outline is drawn
-  vHide = step(f, aSeg);                        // segment not yet reached
-  vPen = smoothstep(f - 0.12, f, aSeg) * step(aSeg, f) * step(aOrder, uBootN) * step(uBootN, aOrder + 1.0);
+  vF = clamp(uBootN - aOrder, 0.0, 1.0); // how much of this tile's outline is drawn
+  vSeg = aSeg;
+  vLive = step(aOrder, uBootN) * (1.0 - step(aOrder + 1.0, uBootN)); // strictly the tile being plotted
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 const wireFrag = /* glsl */ `
 uniform vec3 uChalk;
-varying float vHide;
-varying float vPen;
+varying float vSeg;
+varying float vF;
+varying float vLive;
 void main(){
-  if (vHide > 0.5) discard;
-  gl_FragColor = vec4(uChalk * (1.0 + vPen * 3.0), 0.34 + vPen * 0.66);
+  if (vSeg > vF) discard;                       // ink ends exactly at the pen
+  float pen = vLive * smoothstep(vF - 0.12, vF, vSeg);
+  gl_FragColor = vec4(uChalk * (1.0 + pen * 3.0), 0.34 + pen * 0.66);
+  #include <colorspace_fragment>
 }`;
 
 // lease rings as dashed arcs that rotate with the tick — the lease heartbeat
 const ringVert = /* glsl */ `
-varying float vAng;
+varying float vU;
 varying vec3 vCol;
 void main(){
-  vAng = atan(position.y, position.x);
+  vU = uv.x; // tubular fraction 0..1 — linear, no seam
   #ifdef USE_INSTANCING_COLOR
     vCol = instanceColor;
   #else
@@ -59,19 +64,23 @@ void main(){
   vec4 p = vec4(position, 1.0);
   #ifdef USE_INSTANCING
     p = instanceMatrix * p;
+    vU += dot(instanceMatrix[3].xz, vec2(0.27, 0.37)); // each ring on its own phase
   #endif
   gl_Position = projectionMatrix * modelViewMatrix * p;
 }`;
 const ringFrag = /* glsl */ `
 uniform float uTick;
-varying float vAng;
+varying float vU;
 varying vec3 vCol;
 void main(){
-  float dash = step(0.35, fract(vAng * 1.9099 + uTick * 0.012)); // 12 dashes, drifting
-  gl_FragColor = vec4(vCol, mix(0.22, 1.0, dash));
+  float dash = step(0.42, fract(vU * 8.0 + uTick * 0.012)); // 8 dashes, drifting
+  float beat = 0.8 + 0.2 * sin(uTick * 6.2832 / 28.0);        // LEASE_TTL heartbeat
+  gl_FragColor = vec4(vCol, mix(0.22, 1.0, dash) * beat);
+  #include <colorspace_fragment>
 }`;
 
 const WF_START = phaseStart("workflows");
+const FAULTS_START = phaseStart("faults");
 
 // drafting grid + dithered under-glow on the ground plane
 const groundVert = /* glsl */ `
@@ -87,12 +96,11 @@ uniform float uTick;
 uniform vec4 uKills[4]; // x, z, tick of death, active
 varying vec2 vXZ;
 float bayer4(vec2 p){
-  // 4x4 ordered-dither matrix indexed by screen pixel, never by UV —
-  // locked to the display like a print artifact
-  int x = int(mod(p.x, 4.0)); int y = int(mod(p.y, 4.0));
-  int idx = (x + y * 4);
-  int m[16]; m[0]=0;m[1]=8;m[2]=2;m[3]=10;m[4]=12;m[5]=4;m[6]=14;m[7]=6;m[8]=3;m[9]=11;m[10]=1;m[11]=9;m[12]=15;m[13]=7;m[14]=13;m[15]=5;
-  return (float(m[idx]) + 0.5) / 16.0;
+  // closed-form 4x4 ordered dither indexed by screen pixel — locked to the
+  // display like a print artifact, no dynamically indexed array
+  vec2 q = floor(mod(p, 4.0)); float x = q.x, y = q.y;
+  float a = mod(x + y, 2.0), b = mod(floor(x * 0.5) + floor(y * 0.5), 2.0), c = mod(y, 2.0), d = mod(floor(y * 0.5), 2.0);
+  return (a * 8.0 + c * 4.0 + b * 2.0 + d) / 16.0 + 1.0 / 32.0;
 }
 void main(){
   // shockwaves: each kill sends a ring out through the drafting grid, bending
@@ -126,6 +134,7 @@ void main(){
   float hdith = step(bayer4(gl_FragCoord.xy + 2.0), halo);
   col = mix(col, uCaution, hdith * 0.55);
   gl_FragColor = vec4(col, 1.0);
+  #include <colorspace_fragment>
 }`;
 
 export default function Cluster() {
@@ -151,7 +160,7 @@ export default function Cluster() {
     const pts: number[] = [];
     const order: number[] = [];
     const seg: number[] = [];
-    const h = 0.06, sz = 0.46;
+    const h = WIRE_H, sz = WIRE_SZ;
     const bootIndex = new Array<number>(N);
     sim.run.bootOrder.forEach((tile, k) => { bootIndex[tile] = k; });
     for (let i = 0; i < N; i++) {
@@ -231,6 +240,9 @@ export default function Cluster() {
   }, []);
 
   const firstFrame = useRef(true);
+  const t0 = useRef(-1);
+  const bootIndex = useMemo(() => { const m = new Array<number>(N); sim.run.bootOrder.forEach((t, k) => { m[t] = k; }); return m; }, []);
+  const gated = useMemo(() => new Float32Array(N), []);
   const frameloopRef = useRef<string>("always");
   const lookCur = useMemo(() => new THREE.Vector3(), []);
   useFrame((_state, rawDelta) => {
@@ -273,10 +285,43 @@ export default function Cluster() {
       }
     }
 
+    // ── the plotter: the sheet draws itself as you arrive (~4 tiles/s), then
+    // follows the scroll clock; scrolling back still un-draws it ──
+    if (t0.current < 0) t0.current = _state.clock.elapsedTime;
+    const arrival = _state.frameloop === "demand" ? N : Math.max(0, _state.clock.elapsedTime - t0.current - 0.3) * 4;
+    const bootN = Math.min(N, (tick / PHASE_TICKS.boot) * N, arrival);
+    // everything on a tile waits for its outline: gated power follows the pen
+    for (let i = 0; i < N; i++) {
+      const g = bootN - bootIndex[i];
+      const gate = g <= 0 ? 0 : g >= 4 ? 1 : (g / 4) * (g / 4) * (3 - 2 * (g / 4));
+      gated[i] = Math.min(s.power[i], gate);
+    }
+    wireMat.current.uniforms.uBootN.value = bootN;
+    // dash phase = tick (rewinds with scroll) + a faint wall-clock drift so the
+    // rings still beat while the reader is standing still
+    ringMat.current.uniforms.uTick.value = tick + _state.clock.elapsedTime * 12;
+    {
+      const k = Math.min(N - 1, Math.floor(bootN));
+      const f = bootN - k;
+      const drawing = bootN < N;
+      const tile = run.bootOrder[k];
+      const c = TILE[tile];
+      const sz = WIRE_SZ, h = WIRE_H;
+      // walk the 12 strokes: 4 top edges, 4 uprights, 4 bottom edges
+      const j = Math.min(11, Math.floor(f * 12)), u = f * 12 - j;
+      const corners = [[c.x - sz, c.z - sz], [c.x + sz, c.z - sz], [c.x + sz, c.z + sz], [c.x - sz, c.z + sz]];
+      let px = c.x, py = h, pz = c.z;
+      if (j < 4) { const a = corners[j], b = corners[(j + 1) % 4]; px = a[0] + (b[0] - a[0]) * u; pz = a[1] + (b[1] - a[1]) * u; py = h; }
+      else if (j < 8) { const a = corners[j - 4]; px = a[0]; pz = a[1]; py = h - 2 * h * u; }
+      else { const a = corners[j - 8], b = corners[(j - 8 + 1) % 4]; px = a[0] + (b[0] - a[0]) * u; pz = a[1] + (b[1] - a[1]) * u; py = -h; }
+      pen.current.position.set(px, py, pz);
+      pen.current.scale.setScalar(drawing ? 0.05 : 0.0001);
+    }
+
     // ── slabs: colour by power / alive / facet highlight ──
     const facetTiles = world.facet >= 0 ? run.facetShards[world.facet] : null;
     for (let i = 0; i < N; i++) {
-      const pw = s.power[i];
+      const pw = gated[i];
       const alive = s.alive[i];
       // the slab only exists once its outline has been plotted — it grows in
       // behind the pen, so the boot phase is a drawing being made, not a fade
@@ -300,7 +345,7 @@ export default function Cluster() {
     // ── lease rings: on the holder's tile; yellow when the shard is orphaned ──
     for (let i = 0; i < N; i++) {
       const holder = s.holder[i];
-      const pw = s.power[i];
+      const pw = gated[i];
       const at = holder >= 0 ? tilePos(holder) : tilePos(i);
       const stacked = holder >= 0 && holder !== i;
       tmp.position.set(at.x + (stacked ? 0.18 : 0), 0.12 + (stacked ? 0.1 : 0), at.z + (stacked ? -0.18 : 0));
@@ -319,7 +364,7 @@ export default function Cluster() {
 
     // ── survey flags on dead nodes: caution yellow stakes ──
     for (let i = 0; i < N; i++) {
-      const dead = !s.alive[i] && s.power[i] > 0.05;
+      const dead = !s.alive[i] && gated[i] > 0.05;
       const p = tilePos(i);
       tmp.position.set(p.x - 0.3, dead ? 0.32 : 0, p.z - 0.3);
       tmp.scale.set(dead ? 1 : 0.0001, dead ? 1 : 0.0001, dead ? 1 : 0.0001);
@@ -335,7 +380,7 @@ export default function Cluster() {
     // ── workers: bob with deterministic activity, vanish with their node ──
     workerSlots.forEach((w, k) => {
       const p = tilePos(w.tile);
-      const on = s.alive[w.tile] && w.w < run.workers[w.tile] ? s.power[w.tile] : 0;
+      const on = s.alive[w.tile] && w.w < run.workers[w.tile] ? gated[w.tile] : 0;
       const bob = 0.5 + 0.5 * Math.sin((tick + w.phase * 9) * 0.11);
       tmp.position.set(p.x + w.dx, 0.14 + bob * 0.06 * on, p.z + w.dz);
       tmp.scale.setScalar(0.1 * on);
@@ -371,42 +416,20 @@ export default function Cluster() {
     heads.current.instanceMatrix.needsUpdate = true;
     heads.current.instanceColor!.needsUpdate = true;
 
-    // ── the plotter: wire reveal + pen head position during boot ──
-    const bootN = Math.min(N, (tick / 240) * N);
-    wireMat.current.uniforms.uBootN.value = bootN;
-    // dash phase = tick (rewinds with scroll) + a faint wall-clock drift so the
-    // rings still beat while the reader is standing still
-    ringMat.current.uniforms.uTick.value = tick + _state.clock.elapsedTime * 5;
-    {
-      const k = Math.min(N - 1, Math.floor(bootN));
-      const f = bootN - k;
-      const drawing = bootN < N;
-      const tile = run.bootOrder[k];
-      const c = TILE[tile];
-      const sz = 0.46, h = 0.06;
-      // walk the 12 strokes: 4 top edges, 4 uprights, 4 bottom edges
-      const j = Math.min(11, Math.floor(f * 12)), u = f * 12 - j;
-      const corners = [[c.x - sz, c.z - sz], [c.x + sz, c.z - sz], [c.x + sz, c.z + sz], [c.x - sz, c.z + sz]];
-      let px = c.x, py = h, pz = c.z;
-      if (j < 4) { const a = corners[j], b = corners[(j + 1) % 4]; px = a[0] + (b[0] - a[0]) * u; pz = a[1] + (b[1] - a[1]) * u; py = h; }
-      else if (j < 8) { const a = corners[j - 4]; px = a[0]; pz = a[1]; py = h - 2 * h * u; }
-      else { const a = corners[j - 8], b = corners[(j - 8 + 1) % 4]; px = a[0] + (b[0] - a[0]) * u; pz = a[1] + (b[1] - a[1]) * u; py = -h; }
-      pen.current.position.set(px, py, pz);
-      pen.current.scale.setScalar(drawing ? 0.05 : 0.0001);
-    }
-
     // ── ground glow follows the cluster's overall power ──
     let avg = 0;
-    for (let i = 0; i < N; i++) avg += s.power[i];
+    for (let i = 0; i < N; i++) avg += gated[i];
     groundMat.current.uniforms.uGlow.value = avg / N;
     groundMat.current.uniforms.uTick.value = tick;
     // the last four kills ripple through the drawing (rewinds with the tick)
-    const kills = s.events.filter((e) => e.kind === "warn" && / killed/.test(e.text)).slice(-4);
+    const kills = [
+      ...run.chaos.map((f) => ({ tile: f.tile, at: f.at + FAULTS_START })),
+      ...sim.userFaults,
+    ].filter((f) => f.at <= tick && tick - f.at < 110).slice(-4);
     const kv = groundMat.current.uniforms.uKills.value as THREE.Vector4[];
     for (let k = 0; k < 4; k++) {
-      const e = kills[k];
-      const t = e ? Number(/node (\d+)/.exec(e.text)?.[1]) : NaN;
-      if (e && Number.isFinite(t)) kv[k].set(TILE[t].x, TILE[t].z, e.tick, 1);
+      const f = kills[k];
+      if (f) kv[k].set(TILE[f.tile].x, TILE[f.tile].z, f.at, 1);
       else kv[k].set(0, 0, 0, 0);
     }
 
@@ -569,7 +592,6 @@ export default function Cluster() {
           uniforms={{ uTick: { value: 0 } }}
           transparent
           depthWrite={false}
-          toneMapped={false}
         />
       </instancedMesh>
 
@@ -598,7 +620,7 @@ export default function Cluster() {
           key={c.key}
           position={[TILE[c.tile].x, 0.62, TILE[c.tile].z]}
           center
-          zIndexRange={[5, 0]}
+          zIndexRange={[11, 11]}
           style={{ pointerEvents: "none", whiteSpace: "nowrap" }}
         >
           <span

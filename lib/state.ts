@@ -5,4 +5,5 @@ export const world = {
   hoverTile: -1, // tile under the pointer (for the "hold to kill" caption)
   holdProgress: 0, // 0..1 while the pointer is held on a tile
   project: null as string | null, // open case-study slug → camera dives to its workflow
+  replaying: false, // a logged visit is being re-enacted
 };

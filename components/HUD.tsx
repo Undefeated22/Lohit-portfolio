@@ -20,6 +20,8 @@ const PHASE_LABEL: Record<string, string> = {
 export default function HUD() {
   const tickEl = useRef<HTMLSpanElement>(null);
   const [hover, setHover] = useState<{ tile: number; hold: number; alive: boolean }>({ tile: -1, hold: 0, alive: true });
+  const [replaying, setReplaying] = useState(false);
+  const logSize = useSimSelector(() => sim.userFaults.length);
 
   const phase = useSimSelector((s) => s.phase);
   const faults = useSimSelector((s) => s.faults);
@@ -53,6 +55,7 @@ export default function HUD() {
       if (tickEl.current) tickEl.current.textContent = String(sim.tick).padStart(6, "0");
       const t = world.hoverTile, h = world.holdProgress;
       const alive = t >= 0 ? !!sim.snapshot.alive[t] : true;
+      setReplaying((r) => (r === world.replaying ? r : world.replaying));
       setHover((prev) => (prev.tile === t && prev.alive === alive && Math.abs(prev.hold - h) < 0.02 ? prev : { tile: t, hold: h, alive }));
       raf = requestAnimationFrame(loop);
     };
@@ -67,7 +70,7 @@ export default function HUD() {
       {/* phones: one line */}
       <div className="type-label flex items-center justify-between gap-4 md:hidden">
         <span>
-          <span className="text-text">{PHASE_LABEL[phase]}</span>
+          {replaying ? <span className="tag">REPLAY</span> : <span className="text-text">{PHASE_LABEL[phase]}</span>}
           {faults ? <span className="text-accent"> · {faults} faults</span> : null}
         </span>
         {(notice || last) && <span className={`truncate ${!notice && last?.kind === "fence" ? "text-accent" : ""}`}>{notice || last?.text}</span>}
@@ -83,6 +86,8 @@ export default function HUD() {
           </span>
           <span>phase <span className="text-text">{PHASE_LABEL[phase]}</span></span>
           <span>faults <span className={faults ? "text-accent" : "text-text"}>{faults}</span></span>
+          <span>log <span className="text-text">{logSize}</span></span>
+          {replaying && <span className="tag">REPLAY</span>}
           <span>
             shrunk{" "}
             <span className={shrunk !== null ? "text-accent" : "text-text"}>{shrunk === null ? "—" : `→ ${shrunk}`}</span>

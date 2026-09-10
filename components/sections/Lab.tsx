@@ -53,8 +53,9 @@ function GhFeed() {
 function Row({ i, name, category, tech, status, href }: { i: number } & (typeof experiments)[number]) {
   const chaos = sim.run.chaos[i];
   const at = chaos ? phaseStart("faults") + chaos.at : null;
-  const fired = useSimSelector((s) => (at === null ? true : s.tick >= at));
   const hydrated = useHydrated(); // chaos ticks come from the visitor's seed
+  const firedNow = useSimSelector((s) => (at === null ? true : s.tick >= at));
+  const fired = hydrated ? firedNow : true; // server and first client render agree
   const st = STATUS[status];
   return (
     <li

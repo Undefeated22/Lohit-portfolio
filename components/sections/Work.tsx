@@ -121,7 +121,7 @@ function CaseStudy({ p, onClose, onSwitch }: { p: Project; onClose: () => void; 
           <span className="type-label text-text">WORKFLOW {p.index} — {p.slug} · EVENT HISTORY</span>
           <button ref={closeRef} onClick={onClose} className="type-label link text-text">CLOSE ✕</button>
         </div>
-        <motion.div aria-hidden className="absolute inset-x-0 bottom-0 h-px origin-left bg-accent" style={{ scaleX: reduced ? readRaw : read }} />
+        <motion.div aria-hidden className="absolute inset-x-0 bottom-0 h-px origin-left bg-text/60" style={{ scaleX: reduced ? readRaw : read }} />
       </div>
 
       <div className="mx-auto max-w-[1200px] px-5 pb-32 md:px-8">

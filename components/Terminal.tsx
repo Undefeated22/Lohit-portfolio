@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { identity, projects, stack, socials } from "@/data/portfolio";
-import { commands, openProject } from "@/lib/commands";
+import { commands, openProject, replayRun } from "@/lib/commands";
+import { printSheet } from "@/lib/print";
 import { sim } from "@/lib/simStore";
 import { fetchFeed, ago } from "@/lib/github";
 import { lenisRef, scrollToSection } from "./SmoothScroll";
@@ -13,7 +14,7 @@ import { shortcutsEnabled, typingTarget } from "@/lib/shortcuts";
 type Line = { prompt?: string; out: string; kind?: "err" | "ok" };
 
 const HELP = `commands: help ls cat <slug> open <slug> whoami stack contact gh
-          kill shrink seed [hex] reseed goto <section> clear exit`;
+          kill shrink replay print seed [hex] reseed goto <section> clear exit`;
 
 export default function Terminal() {
   const [open, setOpen] = useState(false);
@@ -101,6 +102,8 @@ export default function Terminal() {
         return print(`run reseeded → ${sim.seedHex}`, "ok");
       }
       case "reseed": return print(String(commands.find((c) => c.id === "sim:reseed")!.run()), "ok");
+      case "replay": { setOpen(false); const msg = replayRun(); window.dispatchEvent(new CustomEvent("lohit:notice", { detail: msg })); return; }
+      case "print": return print(printSheet(), "ok");
       case "goto": {
         const id = arg.replace(/^#/, "");
         lenisRef?.start(); // lenis.scrollTo is a no-op while stopped

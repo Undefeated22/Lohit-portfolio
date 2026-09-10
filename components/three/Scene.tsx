@@ -34,7 +34,7 @@ export default function Scene() {
   const [dpr, setDpr] = useState(1.5);
   const [eventSource, setEventSource] = useState<HTMLElement>();
   const [monitor, setMonitor] = useState(false);
-  const blueprint = useMemo(() => new BlueprintEffect({ edge: 1, dither: 0.55, misreg: 1 }), []);
+  const blueprint = useMemo(() => new BlueprintEffect({ edge: 1, dither: 0.4, misreg: 2.5 }), []);
   useEffect(() => {
     setEventSource(document.body);
     const t = setTimeout(() => setMonitor(true), 2500); // let the first frames settle

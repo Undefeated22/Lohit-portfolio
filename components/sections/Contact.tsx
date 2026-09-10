@@ -5,7 +5,8 @@ import { identity, socials } from "@/data/portfolio";
 import { Reveal, RevealLines } from "../ui/Reveal";
 import { scrollToSection as go } from "../SmoothScroll";
 import { sim, useSimSelector } from "@/lib/simStore";
-import { commands } from "@/lib/commands";
+import { commands, replayRun } from "@/lib/commands";
+import { printSheet } from "@/lib/print";
 
 // SHEET 06 — EXIT 0. The run's own exit readout is the display type:
 // seed, faults, minimal set, return code. Then one sentence and an address.
@@ -23,6 +24,7 @@ export default function Contact() {
   const flash = (s: string) => { setStatus(s); clearTimeout(timer.current); timer.current = setTimeout(() => setStatus(""), 2400); };
   const copyEmail = async () => { try { await navigator.clipboard.writeText(identity.email); flash("email copied"); } catch { flash("copy failed — use the button"); } };
   const shareRun = () => flash(String(commands.find((c) => c.id === "sim:seed")!.run()));
+  const logSize = useSimSelector(() => sim.userFaults.length);
 
   return (
     <section id="contact" data-phase="exit" aria-label="Contact" className="relative flex min-h-svh flex-col justify-center bg-bg-deep/60 px-5 py-28 md:px-8">
@@ -41,6 +43,24 @@ export default function Contact() {
           <p className="type-note mt-8 max-w-[52ch]">
             That was one run of a system built to survive failure. I build those for a living — let&apos;s build one for you.
           </p>
+        </Reveal>
+
+        {/* the visit is a run: logged, replayable, printable, shareable */}
+        <Reveal delay={0.35}>
+          <div className="rule mt-10 grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center md:p-6">
+            <div>
+              <span className="type-label text-text">THIS VISIT IS A RUN</span>
+              <p className="mt-2 max-w-[56ch] text-sm text-text-2">
+                {logSize === 0
+                  ? "You have not killed anything yet. Everything you do is appended to the URL as an event log — anyone with the link sees the same run, kills included, and can replay it from tick 0."
+                  : `${logSize} event${logSize === 1 ? "" : "s"} logged in the URL. Replay them from tick 0, print the drawing as it stands, or send the link — the receiver sees exactly what you did.`}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={() => flash(replayRun())} className="btn">REPLAY ↺</button>
+              <button onClick={() => flash(printSheet())} className="btn">PRINT SHEET</button>
+            </div>
+          </div>
         </Reveal>
 
         <div className="mt-12 flex flex-col gap-10 md:flex-row md:items-end md:justify-between">

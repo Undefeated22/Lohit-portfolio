@@ -4,6 +4,9 @@ import { identity, projects, socials } from "@/data/portfolio";
 import { scrollToSection } from "@/components/SmoothScroll";
 import { sim } from "./simStore";
 import { shortcutsEnabled, setShortcutsEnabled } from "./shortcuts";
+import { printSheet } from "./print";
+import { lenisRef } from "@/components/SmoothScroll";
+import { world } from "./state";
 
 // One registry, three surfaces: ⌘K palette, terminal, keyboard shortcuts.
 export type Command = {
@@ -26,6 +29,26 @@ export function closeProject() {
 
 export const emit = (name: string, detail?: unknown) =>
   dispatchEvent(new CustomEvent(name, { detail }));
+
+/** Replay the visit: rewind to tick 0, then drive the page forward through
+    every logged event at ~8× — the cluster re-enacts your kills and recoveries. */
+export function replayRun(): string {
+  const last = Math.max(sim.lastEventTick(), Math.min(sim.tick, 1880));
+  if (last === 0) return "nothing logged yet — kill a node first";
+  const vh = window.innerHeight || 800;
+  const target = sim.scrollForTick(last, vh);
+  const duration = Math.max(2.5, Math.min(14, (last / 1880) * 16));
+  world.replaying = true;
+  if (lenisRef) {
+    lenisRef.scrollTo(0, { immediate: true });
+    requestAnimationFrame(() => lenisRef?.scrollTo(target, { duration, easing: (t) => t }));
+  } else {
+    window.scrollTo({ top: 0 });
+    window.scrollTo({ top: target, behavior: "smooth" });
+  }
+  setTimeout(() => { world.replaying = false; }, duration * 1000 + 200);
+  return `replaying ${sim.userFaults.length} logged event${sim.userFaults.length === 1 ? "" : "s"} to tick ${last}`;
+}
 
 const go = (id: string, label: string, keywords: string[] = []): Command => ({
   id: `go:${id}`,
@@ -76,6 +99,22 @@ export const commands: Command[] = [
     },
   },
   {
+    id: "sim:replay",
+    label: "replay this visit from tick 0",
+    group: "Simulator",
+    keywords: ["rewind", "playback", "durable", "log"],
+    shortcut: "R",
+    run: () => replayRun(),
+  },
+  {
+    id: "sim:print",
+    label: "print this sheet (SVG)",
+    group: "Simulator",
+    keywords: ["export", "download", "blueprint", "save", "image"],
+    shortcut: "P",
+    run: () => printSheet(),
+  },
+  {
     id: "sim:reseed",
     label: "reseed the run",
     group: "Simulator",
@@ -84,13 +123,13 @@ export const commands: Command[] = [
   },
   {
     id: "sim:seed",
-    label: "copy this run's seed URL",
+    label: "copy this run's URL (seed + your kills)",
     group: "Simulator",
-    keywords: ["share", "reproduce", "url"],
+    keywords: ["share", "reproduce", "url", "log"],
     run: () => {
-      const url = `${location.origin}${location.pathname}#seed=${sim.seedHex}`;
+      const url = sim.shareUrl();
       navigator.clipboard?.writeText(url).catch(() => {});
-      return `seed URL: ${url}`;
+      return `run URL: ${url}`;
     },
   },
 

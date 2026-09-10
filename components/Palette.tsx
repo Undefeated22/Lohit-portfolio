@@ -122,7 +122,7 @@ export default function Palette() {
                       onMouseEnter={() => setActive(i)}
                       onClick={() => run(c)}
                       className={`flex cursor-pointer items-center justify-between px-4 py-2 font-mono text-sm ${
-                        i === active ? "bg-accent text-bg" : "text-text-2"
+                        i === active ? "bg-text text-bg" : "text-text-2"
                       }`}
                     >
                       <span>{c.label}</span>

@@ -150,7 +150,7 @@
   }
   .link:hover,
   .link:focus-visible {
-    text-decoration-color: var(--color-accent);
+    text-decoration-color: var(--color-text);
   }
 
   /* the drafting grid behind everything — 64px hairlines + 8px minor ticks */
@@ -167,8 +167,8 @@
      drawing and the DOM so both take the same light. */
   .exposure {
     background:
-      radial-gradient(110% 80% at 12% 8%, color-mix(in srgb, var(--color-text) 9%, transparent), transparent 58%),
-      radial-gradient(70% 60% at 88% 96%, color-mix(in srgb, var(--color-bg-deep) 85%, transparent), transparent 62%);
+      radial-gradient(90% 70% at 62% 30%, color-mix(in srgb, var(--color-text) 16%, transparent), transparent 60%),
+      radial-gradient(60% 45% at 92% 100%, color-mix(in srgb, var(--color-bg-deep) 70%, transparent), transparent 65%);
   }
 
   /* dimension line: end ticks + centred label, as on a drawing */
