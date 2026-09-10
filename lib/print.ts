@@ -83,12 +83,17 @@ export function sheetSvg(): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${parts.join("")}</svg>`;
 }
 
-/** Opens the printed sheet in a new tab (a real file: save it, share it). */
+/** Saves the printed sheet as a real SVG file — a blueprint of this exact run. */
 export function printSheet(): string {
   const svg = sheetSvg();
   const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-  const w = window.open(url, "_blank", "noopener");
-  if (!w) return "pop-up blocked — allow pop-ups to print the sheet";
+  const name = `lohit-sheet-07-${sim.seedHex}-tick${String(sim.tick).padStart(4, "0")}.svg`;
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  return `printed sheet 07 — seed ${sim.seedHex}, tick ${sim.tick}`;
+  return `saved ${name}`;
 }

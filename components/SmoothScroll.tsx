@@ -61,7 +61,13 @@ export default function SmoothScroll() {
     lenis.on("scroll", (e: { scroll: number }) => sim.onScroll(e.scroll, window.innerHeight));
     let raf = 0;
     const loop = (t: number) => {
-      lenis.raf(t);
+      // an exception inside a scroll listener must never kill smooth scrolling
+      try {
+        lenis.raf(t);
+      } catch (err) {
+        console.error("[lenis] scroll handler threw", err);
+      }
+      if (process.env.NODE_ENV !== "production") (window as unknown as { __lenisBeat?: number }).__lenisBeat = t;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
